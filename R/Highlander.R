@@ -5,7 +5,9 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min
                     LDargs=list(control=list(abstol=0.1), Iterations=Niters[2], Algorithm='CHARM', Thinning=1)
                     ){
 
-  timestart=proc.time()[3] # start timer
+  timestart = proc.time()[3] # start timer
+  date = date()
+  call = match.call(expand.dots=TRUE)
 
   # Inputs:
 
@@ -158,7 +160,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min
   time=(proc.time()[3]-timestart)/60
 
   return(invisible(list(parm=parm_out, LP=LP_out, diff=diff, best=best, iteration=iteration,
-                        CMA_last=CMAout, LD_last=LDout, call=call, date=date(),
+                        CMA_last=CMAout, LD_last=LDout, call=call, date=date,
                         time=time)))
 }
 
