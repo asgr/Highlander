@@ -1,7 +1,7 @@
 Package: Highlander
 Type: Package
 Title: Highlander
-Version: 0.1.1
+Version: 0.1.2
 Author: Aaron Robotham
 Maintainer: Aaron Robotham <aaron.robotham@uwa.edu.au>
 Description: There Can be Only One! Finds the highest points in log-likelihood space by switching between CMA and MCMC phases. Defaults should work pretty well.

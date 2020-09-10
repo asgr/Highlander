@@ -62,6 +62,12 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min
     }
   }else{
     Data$mon.names='LP'
+    if(is.null(Data$parm.names)){
+      Data$parm.names = letters[1:length(parm)]
+    }
+    if(is.null(Data$N)){
+      Data$N = 1
+    }
     LDfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_CMA2LD(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
