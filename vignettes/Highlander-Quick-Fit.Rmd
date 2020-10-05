@@ -140,7 +140,7 @@ High_out = Highlander(badpar, ProSpectSEDlike, Data=Data,
   lower=Data$intervals$lo, upper=Data$intervals$hi, Niters=c(200,200))
 ```
 
-```{r}
+```{r eval=FALSE}
 Data$fit = 'check'
 check_out = ProSpectSEDlike(High_out$parm, Data)
 plot(check_out)

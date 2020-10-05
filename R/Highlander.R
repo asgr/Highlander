@@ -1,6 +1,6 @@
 Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min',
-                    seed=666, lower=NULL, upper=NULL, dynlim=2, ablim=0, optim_iters=2, Niters=c(100,100),
-                    walltime = Inf,
+                    seed=666, lower=NULL, upper=NULL, dynlim=2, ablim=0, optim_iters=2,
+                    Niters=c(100,100), NfinalMCMC=Niters[2], walltime = Inf,
                     CMAargs=list(control=list(maxit=Niters[1])),
                     LDargs=list(control=list(abstol=0.1), Iterations=Niters[2], Algorithm='CHARM', Thinning=1)
                     ){
@@ -136,6 +136,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min
     time=(proc.time()[3]-timestart)/60
     if(time > walltime){break}
     if(i > optim_iters){break}
+
+    if(i == optim_iters){LDargs$Iterations = NfinalMCMC}
 
     LDout = do.call('LaplacesDemon', c(list(Model=LDfunc, Data=quote(Data),  Initial.Values=parm_out),
                           LDargs))
