@@ -32,14 +32,28 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min
   }
 
   if(is.null(lower)){
-    lower = parm*(1/dynlim)
-    lower[(parm*dynlim)<lower] = (parm*dynlim)[(parm*dynlim)<lower]
-    lower = lower-abs(ablim)
+    if(!is.null(Data$intervals$lo)){
+      lower = Data$intervals$lo
+    }else{
+      lower = parm*(1/dynlim)
+      lower[(parm*dynlim)<lower] = (parm*dynlim)[(parm*dynlim)<lower]
+      lower = lower-abs(ablim)
+      Data$intervals$lo = lower
+    }
+  }else{
+    Data$intervals$lo = lower
   }
   if(is.null(upper)){
-    upper = parm*dynlim
-    upper[(parm*(1/dynlim))>upper] = (upper*(1/dynlim))[(upper*(1/dynlim))>upper]
-    upper = upper+abs(ablim)
+    if(!is.null(Data$intervals$hi)){
+      lower = Data$intervals$hi
+    }else{
+      upper = parm*dynlim
+      upper[(parm*(1/dynlim))>upper] = (upper*(1/dynlim))[(upper*(1/dynlim))>upper]
+      upper = upper+abs(ablim)
+      Data$intervals$hi = upper
+    }
+  }else{
+    Data$intervals$hi = upper
   }
 
   if(any(lower==upper)){
@@ -80,7 +94,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min
 
   set.seed(seed)
 
-  for(i in 1:optim_iters){
+  for(i in 1:ceiling(optim_iters)){
     message('Iteration ',i)
 
     time=(proc.time()[3]-timestart)/60
@@ -121,6 +135,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min
 
     time=(proc.time()[3]-timestart)/60
     if(time > walltime){break}
+    if(i > optim_iters){break}
 
     LDout = do.call('LaplacesDemon', c(list(Model=LDfunc, Data=quote(Data),  Initial.Values=parm_out),
                           LDargs))
@@ -162,6 +177,15 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min
   # iteration: iteration number of best solution (if last, might need more optim_iters and/or Niters)
   # CMA_last: last CMA output
   # LD_last: Last LD output
+
+  if(!is.null(Data$constraints)){
+    parm_out = Data$constraints(parm_out)
+  }
+
+  if(!is.null(Data$intervals)){
+    parm_out[parm_out<Data$intervals$lo] = Data$intervals$lo[parm_out<Data$intervals$lo]
+    parm_out[parm_out>Data$intervals$hi] = Data$intervals$hi[parm_out>Data$intervals$hi]
+  }
 
   time=(proc.time()[3]-timestart)/60
 
