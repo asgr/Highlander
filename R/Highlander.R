@@ -238,12 +238,20 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min
 }
 
 .convert_LD2LD=function(parm, Data, likefunc, liketype='min'){
-  #Convert LD type output to LD with only LD monitored (just to be safe)
+  #Convert LD type output to LD
+  if(!is.null(Data$constraints)){
+    parm = Data$constraints(parm)
+  }
+
+  if(!is.null(Data$intervals)){
+    parm[parm<Data$intervals$lo] = Data$intervals$lo[parm<Data$intervals$lo]
+    parm[parm>Data$intervals$hi] = Data$intervals$hi[parm>Data$intervals$hi]
+  }
   output = likefunc(parm, Data)
   if(liketype=='min'){
     fnscale = -1
   }else if(liketype=='max'){
     fnscale = 1
   }
-  return(list(LP=fnscale*output$LP, Dev=fnscale*output$Dev, Monitor=fnscale*output$LP, yhat=1, parm=parm))
+  return(list(LP=fnscale*output$LP, Dev=fnscale*output$Dev, Monitor=output$Monitor, yhat=output$yhat, parm=parm))
 }
