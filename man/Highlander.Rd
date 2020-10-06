@@ -8,7 +8,7 @@ Highlander
 There Can be Only One! Finds the highest points in log-likelihood space by switching between CMA and MCMC phases. Defaults should work pretty well.
 }
 \usage{
-Highlander(parm = NULL, Data, likefunc, likefunctype = "CMA", liketype = 'min',
+Highlander(parm = NULL, Data, likefunc, likefunctype = "CMA", liketype = NULL,
   seed = 666, lower = NULL, upper = NULL, dynlim = 2, ablim = 0,
   optim_iters = 2, Niters = c(100,100), NfinalMCMC = Niters[2], walltime = Inf,
   CMAargs = list(control=list(maxit=Niters[1])),
@@ -31,7 +31,7 @@ Function; takes arguments \option{parm} and \option{Data}; can output CMA scalar
 Character scalar; if \option{likefunc} outputs just the \code{abs(LP)} then 'CMA', if the list for LD then 'LD' (see \code{\link{LaplacesDemon}}).
 }
   \item{liketype}{
-Character scalar; is the likelihood output by \option{likefunc} defined in a way that means we want to minimise ('min'; Chi^2 type) or maximise ('max'; log-likelihood type) the function? The default assumes the standard minimisation setup of CMA (so 'min').
+Character scalar; is the likelihood output by \option{likefunc} defined in a way that means we want to minimise ('min'; Chi^2 type) or maximise ('max'; log-likelihood type) the function? The left as NULL the default assumes the standard minimisation setup of CMA (so 'min'), and maximisation setup of LD (so 'max').
 }
   \item{seed}{
 Integer scalar; random seed to start the \code{Highlander} function with.

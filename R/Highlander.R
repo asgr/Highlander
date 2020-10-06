@@ -1,4 +1,4 @@
-Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min',
+Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype=NULL,
                     seed=666, lower=NULL, upper=NULL, dynlim=2, ablim=0, optim_iters=2,
                     Niters=c(100,100), NfinalMCMC=Niters[2], walltime = Inf,
                     CMAargs=list(control=list(maxit=Niters[1])),
@@ -9,6 +9,10 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min
   date = date()
   call = match.call(expand.dots=TRUE)
 
+  if(is.null(liketype)){
+    if(likefunctype=='CMA'){liketype='min'}
+    if(likefunctype=='LD'){liketype='max'}
+  }
   # Inputs:
 
   # parm: usual parameter vector; input to likefunc
@@ -60,27 +64,32 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min
     stop('lower and upper cannot have the same values!')
   }
 
+  DataCMA = Data
+
   if(likefunctype=='CMA'){
     CMAfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_CMA2CMA(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
   }else{
+    DataCMA$mon.names=''
     CMAfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_LD2CMA(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
   }
+
+  DataLD = Data
 
   if(likefunctype=='LD'){
     LDfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_LD2LD(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
   }else{
-    Data$mon.names='LP'
-    if(is.null(Data$parm.names)){
-      Data$parm.names = letters[1:length(parm)]
+    DataLD$mon.names='LP'
+    if(is.null(DataLD$parm.names)){
+      DataLD$parm.names = letters[1:length(parm)]
     }
-    if(is.null(Data$N)){
-      Data$N = 1
+    if(is.null(DataLD$N)){
+      DataLD$N = 1
     }
     LDfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_CMA2LD(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
@@ -101,7 +110,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min
     if(time > walltime){break}
 
     tempsafe = try(
-      do.call('cmaeshpc', c(list(par=parm_out, fn=CMAfunc, Data=quote(Data), lower=lower,
+      do.call('cmaeshpc', c(list(par=parm_out, fn=CMAfunc, Data=quote(DataCMA), lower=lower,
            upper=upper), CMAargs))
     )
 
@@ -139,7 +148,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype='min
 
     if(i == optim_iters){LDargs$Iterations = NfinalMCMC}
 
-    LDout = do.call('LaplacesDemon', c(list(Model=LDfunc, Data=quote(Data),  Initial.Values=parm_out),
+    LDout = do.call('LaplacesDemon', c(list(Model=LDfunc, Data=quote(DataLD),  Initial.Values=parm_out),
                           LDargs))
 
     if(LP_out < max(LDout$Monitor[,1])){
