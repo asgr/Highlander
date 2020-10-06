@@ -89,7 +89,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   DataLD = Data
 
   if(likefunctype == 'LD'){
-    DataLD$mon.names = c('LP', DataLD$mon.names)
+    DataLD$mon.names = c('LP_mon', DataLD$mon.names)
     LDfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_LD2LD(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
@@ -266,11 +266,16 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     parm[parm<Data$intervals$lo] = Data$intervals$lo[parm<Data$intervals$lo]
     parm[parm>Data$intervals$hi] = Data$intervals$hi[parm>Data$intervals$hi]
   }
+  if(length(Data$mon.names) > 1){
+    Data$mon.names = Data$mon.names[2:length(Data$mon.names)]
+  }else{
+    Data$mon.names = ''
+  }
   output = likefunc(parm, Data)
   if(liketype=='min'){
     fnscale = -1
   }else if(liketype=='max'){
     fnscale = 1
   }
-  return(list(LP=fnscale*output$LP, Dev=fnscale*output$Dev, Monitor=cbind(fnscale*output,output$Monitor), yhat=output$yhat, parm=parm))
+  return(list(LP=fnscale*output$LP, Dev=fnscale*output$Dev, Monitor=c(fnscale*output$LP,output$Monitor), yhat=output$yhat, parm=parm))
 }
