@@ -69,18 +69,18 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }
 
   if(is.null(liketype)){
-    if(likefunctype=='CMA'){liketype='min'}
-    if(likefunctype=='LD'){liketype='max'}
+    if(likefunctype == 'CMA'){liketype = 'min'}
+    if(likefunctype == 'LD'){liketype = 'max'}
   }
 
   DataCMA = Data
 
-  if(likefunctype=='CMA'){
+  if(likefunctype == 'CMA'){
     CMAfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_CMA2CMA(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
   }else{
-    DataCMA$mon.names=''
+    DataCMA$mon.names = ''
     CMAfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_LD2CMA(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
@@ -88,12 +88,13 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
   DataLD = Data
 
-  if(likefunctype=='LD'){
+  if(likefunctype == 'LD'){
+    DataLD$mon.names = c('LP', DataLD$mon.names)
     LDfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_LD2LD(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
   }else{
-    DataLD$mon.names='LP'
+    DataLD$mon.names = 'LP'
     if(is.null(DataLD$parm.names)){
       DataLD$parm.names = letters[1:length(parm)]
     }
@@ -271,5 +272,5 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }else if(liketype=='max'){
     fnscale = 1
   }
-  return(list(LP=fnscale*output$LP, Dev=fnscale*output$Dev, Monitor=output$Monitor, yhat=output$yhat, parm=parm))
+  return(list(LP=fnscale*output$LP, Dev=fnscale*output$Dev, Monitor=cbind(fnscale*output,output$Monitor), yhat=output$yhat, parm=parm))
 }
