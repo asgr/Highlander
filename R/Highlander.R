@@ -1,4 +1,4 @@
-Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype=NULL,
+Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
                     seed=666, lower=NULL, upper=NULL, dynlim=2, ablim=0, optim_iters=2,
                     Niters=c(100,100), NfinalMCMC=Niters[2], walltime = Inf,
                     CMAargs=list(control=list(maxit=Niters[1])),
@@ -9,10 +9,6 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype=NULL
   date = date()
   call = match.call(expand.dots=TRUE)
 
-  if(is.null(liketype)){
-    if(likefunctype=='CMA'){liketype='min'}
-    if(likefunctype=='LD'){liketype='max'}
-  }
   # Inputs:
 
   # parm: usual parameter vector; input to likefunc
@@ -62,6 +58,19 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype='CMA', liketype=NULL
 
   if(any(lower==upper)){
     stop('lower and upper cannot have the same values!')
+  }
+
+  if(is.null(likefunctype)){
+    if(length(likefunc(parm, Data)) == 1){
+      likefunctype = 'CMA'
+    }else{
+      likefunctype = 'LD'
+    }
+  }
+
+  if(is.null(liketype)){
+    if(likefunctype=='CMA'){liketype='min'}
+    if(likefunctype=='LD'){liketype='max'}
   }
 
   DataCMA = Data

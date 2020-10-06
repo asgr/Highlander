@@ -8,12 +8,12 @@ Highlander
 There Can be Only One! Finds the highest points in log-likelihood space by switching between CMA and MCMC phases. Defaults should work pretty well.
 }
 \usage{
-Highlander(parm = NULL, Data, likefunc, likefunctype = "CMA", liketype = NULL,
+Highlander(parm = NULL, Data, likefunc, likefunctype = NULL, liketype = NULL,
   seed = 666, lower = NULL, upper = NULL, dynlim = 2, ablim = 0,
   optim_iters = 2, Niters = c(100,100), NfinalMCMC = Niters[2], walltime = Inf,
   CMAargs = list(control=list(maxit=Niters[1])),
-  LDargs = list(control=list(abstol=0.1), Iterations=Niters[2],
-  Algorithm='CHARM', Thinning=1)
+  LDargs = list(control=list(abstol=0.1), Iterations = Niters[2],
+  Algorithm = 'CHARM', Thinning = 1)
   )
 }
 %- maybe also 'usage' for other objects documented here.
@@ -28,10 +28,10 @@ List; usual data input to \option{likefunc} This is where you should put all add
 Function; takes arguments \option{parm} and \option{Data}; can output CMA scalar or LD list classes of outputs (this needs to be communicated by setting \option{likefunctype} as appropriate.
 }
   \item{likefunctype}{
-Character scalar; if \option{likefunc} outputs just the \code{abs(LP)} then 'CMA', if the list for LD then 'LD' (see \code{\link{LaplacesDemon}}).
+Character scalar; if \option{likefunc} outputs just the \code{abs(LP)} then 'CMA', if the list for LD then 'LD' (see \code{\link{LaplacesDemon}}). If left as NULL then it will attempt to guess the format based on the length of the \option{likefunc} output: if it is length 1 then it assumes \option{likefunctype} = 'CMA', otherwise it will assume 'LD'. This is usually correct.
 }
   \item{liketype}{
-Character scalar; is the likelihood output by \option{likefunc} defined in a way that means we want to minimise ('min'; Chi^2 type) or maximise ('max'; log-likelihood type) the function? The left as NULL the default assumes the standard minimisation setup of CMA (so 'min'), and maximisation setup of LD (so 'max').
+Character scalar; is the likelihood output by \option{likefunc} defined in a way that means we want to minimise ('min'; Chi^2 type) or maximise ('max'; log-likelihood type) the function? If left as NULL the default assumes the standard minimisation setup of CMA (so 'min'), and maximisation setup of LD (so 'max').
 }
   \item{seed}{
 Integer scalar; random seed to start the \code{Highlander} function with.
