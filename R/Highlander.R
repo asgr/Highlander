@@ -1,8 +1,9 @@
 Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
-                    seed=666, lower=NULL, upper=NULL, dynlim=2, ablim=0, optim_iters=2,
+                    seed=666, lower=NULL, upper=NULL, applyintervals=TRUE, applyconstraints=TRUE, dynlim=2, ablim=0, optim_iters=2,
                     Niters=c(100,100), NfinalMCMC=Niters[2], walltime = Inf,
                     CMAargs=list(control=list(maxit=Niters[1])),
-                    LDargs=list(control=list(abstol=0.1), Iterations=Niters[2], Algorithm='CHARM', Thinning=1)
+                    LDargs=list(control=list(abstol=0.1), Iterations=Niters[2], Algorithm='CHARM',
+                    Thinning=1)
                     ){
 
   timestart = proc.time()[3] # start timer
@@ -31,6 +32,9 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     stop('parm is NULL!')
   }
 
+  Data$applyintervals = applyintervals
+  Data$applyconstraints = applyconstraints
+
   if(is.null(lower)){
     if(!is.null(Data$intervals$lo)){
       lower = Data$intervals$lo
@@ -38,10 +42,10 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       lower = parm*(1/dynlim)
       lower[(parm*dynlim)<lower] = (parm*dynlim)[(parm*dynlim)<lower]
       lower = lower-abs(ablim)
-      Data$intervals$lo = lower
+      if(applyintervals){Data$intervals$lo = lower}
     }
   }else{
-    Data$intervals$lo = lower
+    if(applyintervals){Data$intervals$lo = lower}
   }
   if(is.null(upper)){
     if(!is.null(Data$intervals$hi)){
@@ -50,10 +54,10 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       upper = parm*dynlim
       upper[(parm*(1/dynlim))>upper] = (upper*(1/dynlim))[(upper*(1/dynlim))>upper]
       upper = upper+abs(ablim)
-      Data$intervals$hi = upper
+      if(applyintervals){Data$intervals$hi = upper}
     }
   }else{
-    Data$intervals$hi = upper
+    if(applyintervals){Data$intervals$hi = upper}
   }
 
   if(any(lower==upper)){
@@ -199,13 +203,13 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   # CMA_last: last CMA output
   # LD_last: Last LD output
 
-  if(!is.null(Data$constraints)){
+  if(applyconstraints & !is.null(Data$constraints)){
     parm_out = Data$constraints(parm_out)
   }
 
-  if(!is.null(Data$intervals)){
-    parm_out[parm_out<Data$intervals$lo] = Data$intervals$lo[parm_out<Data$intervals$lo]
-    parm_out[parm_out>Data$intervals$hi] = Data$intervals$hi[parm_out>Data$intervals$hi]
+  if(applyintervals & !is.null(Data$intervals)){
+    parm_out[parm_out < Data$intervals$lo] = Data$intervals$lo[parm_out < Data$intervals$lo]
+    parm_out[parm_out > Data$intervals$hi] = Data$intervals$hi[parm_out > Data$intervals$hi]
   }
 
   time=(proc.time()[3]-timestart)/60
@@ -228,11 +232,11 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
 .convert_CMA2LD=function(parm, Data, likefunc, liketype='min'){
   #Convert CMA type output to LD
-  if(!is.null(Data$constraints)){
+  if(Data$applyconstraints & !is.null(Data$constraints)){
     parm = Data$constraints(parm)
   }
 
-  if(!is.null(Data$intervals)){
+  if(Data$applyintervals & !is.null(Data$intervals$lo) & !is.null(Data$intervals$hi)){
     parm[parm<Data$intervals$lo] = Data$intervals$lo[parm<Data$intervals$lo]
     parm[parm>Data$intervals$hi] = Data$intervals$hi[parm>Data$intervals$hi]
   }
@@ -258,11 +262,11 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
 .convert_LD2LD=function(parm, Data, likefunc, liketype='min'){
   #Convert LD type output to LD
-  if(!is.null(Data$constraints)){
+  if(Data$applyconstraints & !is.null(Data$constraints)){
     parm = Data$constraints(parm)
   }
 
-  if(!is.null(Data$intervals)){
+  if(Data$applyintervals & !is.null(Data$intervals$lo) & !is.null(Data$intervals$hi)){
     parm[parm<Data$intervals$lo] = Data$intervals$lo[parm<Data$intervals$lo]
     parm[parm>Data$intervals$hi] = Data$intervals$hi[parm>Data$intervals$hi]
   }

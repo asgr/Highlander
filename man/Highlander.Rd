@@ -9,9 +9,9 @@ There Can be Only One! Finds the highest points in log-likelihood space by switc
 }
 \usage{
 Highlander(parm = NULL, Data, likefunc, likefunctype = NULL, liketype = NULL,
-  seed = 666, lower = NULL, upper = NULL, dynlim = 2, ablim = 0,
-  optim_iters = 2, Niters = c(100,100), NfinalMCMC = Niters[2], walltime = Inf,
-  CMAargs = list(control=list(maxit=Niters[1])),
+  seed = 666, lower = NULL, upper = NULL, applyintervals = TRUE, applyconstraints = TRUE,
+  dynlim = 2, ablim = 0, optim_iters = 2, Niters = c(100,100), NfinalMCMC = Niters[2],
+  walltime = Inf, CMAargs = list(control=list(maxit=Niters[1])),
   LDargs = list(control=list(abstol=0.1), Iterations = Niters[2],
   Algorithm = 'CHARM', Thinning = 1)
   )
@@ -41,6 +41,12 @@ Numeric vector; lower limit allowed for \option{parm}; if NULL it becomes the mi
 }
   \item{upper}{
 Numeric vector; upper limit allowed for \option{parm}; if NULL it becomes the maximum of \option{parm}*(1/\option{dynlim})  + \option{ablim} or \option{parm}*\option{dynlim} + \option{ablim}.
+}
+  \item{applyintervals}{
+Logical; should the lower and upper intervals be applied by \code{Highlander} directly? This means it will create the list items Data$intervals$lo = lower and Data$intervals$hi = upper. You might want to set this to FALSE when your likelihood function deals with intervals itself and creating such structures will break functionality inside \option{likefunc} (e.g. this is the case when running with \code{ProFit}).
+}
+  \item{applyconstraints}{
+Logical; should constraints be applied by \code{Highlander} directly? This means it will pass the current \option{parm} through Data$contraints. You might want to set this to FALSE when your likelihood function deals with constraints itself and applying such structures will break functionality inside \option{likefunc} (e.g. this is the case when running with \code{ProFit}).
 }
   \item{dynlim}{
 Numeric vector; dynamic limit range for automatically defined limits (effectively ignored if \option{dynlim} = 1). See \option{lower} and \option{upper} to see examples of how \option{dynlim} is used in practice.
