@@ -86,6 +86,8 @@ A list output containing:
 \item{iteration}{Integer scalar; iteration number of best solution.}
 \item{CMA_last}{List; output of last CMA optimisation (see \code{\link{cmaeshpc}}).}
 \item{LD_last}{List; output of last MCMC optimisation (see \code{\link{LaplacesDemon}}).}
+\item{N}{Integer scalar; number of observations (approximately the degrees of freedom).}
+\item{RedChi2}{Numeric scalar; the approximate reduced Chi^2 of the fit (more for reference than use).}
 \item{call}{List; the full call made to \code{Highlander}.}
 \item{date}{Date item; the date and time of the call.}
 \item{time}{Numeric scalar; run time in minutes.}

@@ -212,10 +212,12 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     parm_out[parm_out > Data$intervals$hi] = Data$intervals$hi[parm_out > Data$intervals$hi]
   }
 
+  RedChi2 = LP_out/(-1.418939 * DataLD$N)
+
   time=(proc.time()[3]-timestart)/60
 
   return(invisible(list(parm=parm_out, LP=LP_out, diff=diff, best=best, iteration=iteration,
-                        CMA_last=CMAout, LD_last=LDout, call=call, date=date,
+                        CMA_last=CMAout, LD_last=LDout, N = DataLD$N, RedChi2 = RedChi2, call=call, date=date,
                         time=time)))
 }
 
