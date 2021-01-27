@@ -94,6 +94,12 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
   if(likefunctype == 'LD'){
     DataLD$mon.names = c('LP_mon', DataLD$mon.names)
+    if(is.null(DataLD$parm.names)){
+      DataLD$parm.names = letters[1:length(parm)]
+    }
+    if(is.null(DataLD$N)){
+      DataLD$N = 1
+    }
     LDfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_LD2LD(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
@@ -136,6 +142,25 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       )
     }else{
       CMAout = tempsafe
+      if(is.null(CMAout$par)){ #Catch bad initial starting positions and jitter
+        tempsafe = try(
+          do.call('cmaeshpc', c(list(par=jitter(parm_out), fn=CMAfunc, Data=quote(DataCMA), lower=lower,
+                                     upper=upper), CMAargs))
+        )
+        if(class(tempsafe)=="try-error"){
+          message('CMA failed!')
+          CMAout = list(
+            value = -Inf,
+            par = parm_out
+          )
+        }else{
+          CMAout = tempsafe
+          if(is.null(CMAout$par)){
+            message('CMA is failing- something must be badly wrong!')
+            return(NULL)
+          }
+        }
+      }
     }
 
     if(i==1){
