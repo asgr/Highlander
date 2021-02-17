@@ -58,7 +58,7 @@ Numeric vector; absolute limit range for automatically defined limits (effective
 Integer scalar; number of CMA / LD loops.
 }
   \item{Niters}{
-Integer vector; number of iterations per CMA and LD (so can be vector length 2, otherwise value is repeated).
+Integer vector; number of iterations per CMA and LD respectively (must be length 2).
 }
   \item{NfinalMCMC}{
 Integer scalar; number of iterations to run for the final MCMC run. You might want to make this large if the idea is you are using the previous optimisation steps to find a good starting point, but you want to the final MCMC run using \code{\link{LaplacesDemon}} to provide detailed posterior inference.

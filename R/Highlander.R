@@ -308,5 +308,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }else if(liketype=='max'){
     fnscale = 1
   }
+  if(!is.null(output$parm)){
+    parm = output$parm
+  }
   return(list(LP=fnscale*output$LP, Dev=fnscale*output$Dev, Monitor=c(fnscale*output$LP,output$Monitor), yhat=output$yhat, parm=parm))
 }
