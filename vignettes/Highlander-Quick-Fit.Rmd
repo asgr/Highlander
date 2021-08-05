@@ -2,8 +2,9 @@
 title: "Fake It Until You Make It"
 author: "Aaron Robotham"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
+output: 
+  rmarkdown::html_vignette
+vignette: |
   %\VignetteIndexEntry{Mock Fitting}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
@@ -15,7 +16,7 @@ Load the libraries we will need:
 
 ```{r}
 library(ProSpect)
-library(LaplacesDemon)
+library(Highlander)
 library(foreach)
 library(celestial)
 library(magicaxis)

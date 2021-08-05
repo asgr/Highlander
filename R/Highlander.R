@@ -32,35 +32,43 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     stop('parm is NULL!')
   }
 
-  Data$applyintervals = applyintervals
-  Data$applyconstraints = applyconstraints
+  Data[['applyintervals']] = applyintervals
+  Data[['applyconstraints']] = applyconstraints
 
   if(is.null(lower)){
-    if(!is.null(Data$intervals$lo)){
-      lower = Data$intervals$lo
+    if(!is.null(Data[['intervals']]$lo)){
+      lower = Data[['intervals']]$lo
     }else{
       lower = parm*(1/dynlim)
       lower[(parm*dynlim)<lower] = (parm*dynlim)[(parm*dynlim)<lower]
-      lower = lower-abs(ablim)
-      if(applyintervals){Data$intervals$lo = lower}
+      lower = lower - abs(ablim)
+      if(applyintervals){
+        Data[['intervals']]$lo = lower
+      }else{
+        lower[lower == 0 & ablim==0] = -Inf
+      }
     }
   }else{
-    if(applyintervals){Data$intervals$lo = lower}
+    if(applyintervals){Data[['intervals']]$lo = lower}
   }
   if(is.null(upper)){
-    if(!is.null(Data$intervals$hi)){
-      lower = Data$intervals$hi
+    if(!is.null(Data[['intervals']]$hi)){
+      lower = Data[['intervals']]$hi
     }else{
       upper = parm*dynlim
       upper[(parm*(1/dynlim))>upper] = (upper*(1/dynlim))[(upper*(1/dynlim))>upper]
-      upper = upper+abs(ablim)
-      if(applyintervals){Data$intervals$hi = upper}
+      upper = upper + abs(ablim)
+      if(applyintervals){
+        Data[['intervals']]$hi = upper
+      }else{
+        upper[upper == 0 & ablim==0] = Inf
+      }
     }
   }else{
-    if(applyintervals){Data$intervals$hi = upper}
+    if(applyintervals){Data[['intervals']]$hi = upper}
   }
 
-  if(any(lower==upper)){
+  if(any(lower == upper)){
     stop('lower and upper cannot have the same values!')
   }
 
@@ -84,7 +92,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       .convert_CMA2CMA(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
   }else{
-    DataCMA$mon.names = ''
+    DataCMA[['mon.names']] = ''
     CMAfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_LD2CMA(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
@@ -93,23 +101,23 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   DataLD = Data
 
   if(likefunctype == 'LD'){
-    DataLD$mon.names = c('LP_mon', DataLD$mon.names)
-    if(is.null(DataLD$parm.names)){
-      DataLD$parm.names = letters[1:length(parm)]
+    DataLD[['mon.names']] = c('LP_mon', DataLD[['mon.names']])
+    if(is.null(DataLD[['parm.names']])){
+      DataLD[['parm.names']] = letters[1:length(parm)]
     }
-    if(is.null(DataLD$N)){
-      DataLD$N = 1
+    if(is.null(DataLD[['N']])){
+      DataLD[['N']] = 1
     }
     LDfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_LD2LD(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
   }else{
-    DataLD$mon.names = 'LP'
-    if(is.null(DataLD$parm.names)){
-      DataLD$parm.names = letters[1:length(parm)]
+    DataLD[['mon.names']] = 'LP'
+    if(is.null(DataLD[['parm.names']])){
+      DataLD[['parm.names']] = letters[1:length(parm)]
     }
-    if(is.null(DataLD$N)){
-      DataLD$N = 1
+    if(is.null(DataLD[['N']])){
+      DataLD[['N']] = 1
     }
     LDfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_CMA2LD(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
@@ -142,7 +150,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       )
     }else{
       CMAout = tempsafe
-      if(is.null(CMAout$par)){ #Catch bad initial starting positions and jitter
+      if(is.null(CMAout[['par']])){ #Catch bad initial starting positions and jitter
         tempsafe = try(
           do.call('cmaeshpc', c(list(par=jitter(parm_out), fn=CMAfunc, Data=quote(DataCMA), lower=lower,
                                      upper=upper), CMAargs))
@@ -155,7 +163,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
           )
         }else{
           CMAout = tempsafe
-          if(is.null(CMAout$par)){
+          if(is.null(CMAout[['par']])){
             message('CMA is failing- something must be badly wrong!')
             return(NULL)
           }
@@ -165,16 +173,16 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
     if(i==1){
       diff=NA
-      LP_out = -CMAout$value
-      parm_out = CMAout$par
+      LP_out = -CMAout[['value']]
+      parm_out = CMAout[['par']]
       best = 'CMA'
       iteration = i
       message('CMA ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
     }else{
-      if(LP_out < -CMAout$value){
-        diff = abs(LP_out - -CMAout$value)
-        LP_out = -CMAout$value
-        parm_out = CMAout$par
+      if(LP_out < -CMAout[['value']]){
+        diff = abs(LP_out - -CMAout[['value']])
+        LP_out = -CMAout[['value']]
+        parm_out = CMAout[['par']]
         best = 'CMA'
         iteration = i
         message('CMA ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
@@ -185,36 +193,38 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     if(time > walltime){break}
     if(i > optim_iters){break}
 
-    if(i == optim_iters){LDargs$Iterations = NfinalMCMC}
+    if(i == optim_iters){LDargs[['Iterations']] = NfinalMCMC}
 
-    LDout = do.call('LaplacesDemon', c(list(Model=LDfunc, Data=quote(DataLD),  Initial.Values=parm_out),
-                          LDargs))
+    if(LDargs[['Iterations']] > 0){
+      LDout = do.call('LaplacesDemon', c(list(Model=LDfunc, Data=quote(DataLD),  Initial.Values=parm_out),
+                            LDargs))
 
-    if(LP_out < max(LDout$Monitor[,1])){
-      diff = abs(LP_out - max(LDout$Monitor[,1]))
-      LP_out = max(LDout$Monitor[,1])
-      parm_out = LDout$Posterior1[which.max(LDout$Monitor[,1]),]
-      best = 'LD_Mode'
-      iteration = i
-      message('LD Mode ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
-    }
+      if(LP_out < max(LDout[['Monitor']][,1])){
+        diff = abs(LP_out - max(LDout[['Monitor']][,1]))
+        LP_out = max(LDout[['Monitor']][,1])
+        parm_out = LDout$Posterior1[which.max(LDout[['Monitor']][,1]),]
+        best = 'LD_Mode'
+        iteration = i
+        message('LD Mode ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
+      }
 
-    if(LP_out < LDout$Summary1['LP','Median']){
-      diff = abs(LP_out - LDout$Summary1['LP','Median'])
-      LP_out = LDout$Summary1['LP','Median']
-      parm_out = LDout$Summary1[1:length(parm_out),'Median']
-      best = 'LD_Median'
-      iteration = i
-      message('LD Median ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
-    }
+      if(LP_out < LDout$Summary1['LP','Median']){
+        diff = abs(LP_out - LDout$Summary1['LP','Median'])
+        LP_out = LDout$Summary1['LP','Median']
+        parm_out = LDout$Summary1[1:length(parm_out),'Median']
+        best = 'LD_Median'
+        iteration = i
+        message('LD Median ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
+      }
 
-    if(LP_out < LDout$Summary1['LP','Mean']){
-      diff = abs(LP_out - LDout$Summary1['LP','Mean'])
-      LP_out = LDout$Summary1['LP','Mean']
-      parm_out = LDout$Summary1[1:length(parm_out),'Mean']
-      best = 'LD_Mean'
-      iteration = i
-      message('LD Mean ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
+      if(LP_out < LDout$Summary1['LP','Mean']){
+        diff = abs(LP_out - LDout$Summary1['LP','Mean'])
+        LP_out = LDout$Summary1['LP','Mean']
+        parm_out = LDout$Summary1[1:length(parm_out),'Mean']
+        best = 'LD_Mean'
+        iteration = i
+        message('LD Mean ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
+      }
     }
   }
 
@@ -228,21 +238,21 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   # CMA_last: last CMA output
   # LD_last: Last LD output
 
-  if(applyconstraints & !is.null(Data$constraints)){
-    parm_out = Data$constraints(parm_out)
+  if(applyconstraints & !is.null(Data[['constraints']])){
+    parm_out = Data[['constraints']](parm_out)
   }
 
-  if(applyintervals & !is.null(Data$intervals)){
-    parm_out[parm_out < Data$intervals$lo] = Data$intervals$lo[parm_out < Data$intervals$lo]
-    parm_out[parm_out > Data$intervals$hi] = Data$intervals$hi[parm_out > Data$intervals$hi]
+  if(applyintervals & !is.null(Data[['intervals']])){
+    parm_out[parm_out < Data[['intervals']]$lo] = Data[['intervals']]$lo[parm_out < Data[['intervals']]$lo]
+    parm_out[parm_out > Data[['intervals']]$hi] = Data[['intervals']]$hi[parm_out > Data[['intervals']]$hi]
   }
 
-  RedChi2 = LP_out/(-1.418939 * DataLD$N)
+  RedChi2 = LP_out/(-1.418939 * DataLD[['N']])
 
   time=(proc.time()[3]-timestart)/60
 
   return(invisible(list(parm=parm_out, LP=LP_out, diff=diff, best=best, iteration=iteration,
-                        CMA_last=CMAout, LD_last=LDout, N = DataLD$N, RedChi2 = RedChi2, call=call, date=date,
+                        CMA_last=CMAout, LD_last=LDout, N = DataLD[['N']], RedChi2 = RedChi2, call=call, date=date,
                         time=time)))
 }
 
@@ -259,13 +269,13 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
 .convert_CMA2LD=function(parm, Data, likefunc, liketype='min'){
   #Convert CMA type output to LD
-  if(Data$applyconstraints & !is.null(Data$constraints)){
-    parm = Data$constraints(parm)
+  if(Data[['applyconstraints']] & !is.null(Data[['constraints']])){
+    parm = Data[['constraints']](parm)
   }
 
-  if(Data$applyintervals & !is.null(Data$intervals$lo) & !is.null(Data$intervals$hi)){
-    parm[parm<Data$intervals$lo] = Data$intervals$lo[parm<Data$intervals$lo]
-    parm[parm>Data$intervals$hi] = Data$intervals$hi[parm>Data$intervals$hi]
+  if(Data[['applyconstraints']] & !is.null(Data[['intervals']]$lo) & !is.null(Data[['intervals']]$hi)){
+    parm[parm<Data[['intervals']]$lo] = Data[['intervals']]$lo[parm<Data[['intervals']]$lo]
+    parm[parm>Data[['intervals']]$hi] = Data[['intervals']]$hi[parm>Data[['intervals']]$hi]
   }
   output = likefunc(parm, Data)
   if(liketype=='min'){
@@ -289,18 +299,18 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
 .convert_LD2LD=function(parm, Data, likefunc, liketype='min'){
   #Convert LD type output to LD
-  if(Data$applyconstraints & !is.null(Data$constraints)){
-    parm = Data$constraints(parm)
+  if(Data[['applyconstraints']] & !is.null(Data[['constraints']])){
+    parm = Data[['constraints']](parm)
   }
 
-  if(Data$applyintervals & !is.null(Data$intervals$lo) & !is.null(Data$intervals$hi)){
-    parm[parm<Data$intervals$lo] = Data$intervals$lo[parm<Data$intervals$lo]
-    parm[parm>Data$intervals$hi] = Data$intervals$hi[parm>Data$intervals$hi]
+  if(Data[['applyintervals']] & !is.null(Data[['intervals']]$lo) & !is.null(Data[['intervals']]$hi)){
+    parm[parm<Data[['intervals']]$lo] = Data[['intervals']]$lo[parm<Data[['intervals']]$lo]
+    parm[parm>Data[['intervals']]$hi] = Data[['intervals']]$hi[parm>Data[['intervals']]$hi]
   }
-  if(length(Data$mon.names) > 1){
-    Data$mon.names = Data$mon.names[2:length(Data$mon.names)]
+  if(length(Data[['mon.names']]) > 1){
+    Data[['mon.names']] = Data[['mon.names']][2:length(Data[['mon.names']])]
   }else{
-    Data$mon.names = ''
+    Data[['mon.names']] = ''
   }
   output = likefunc(parm, Data)
   if(liketype=='min'){
@@ -308,8 +318,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }else if(liketype=='max'){
     fnscale = 1
   }
-  if(!is.null(output$parm)){
-    parm = output$parm
+  if(!is.null(output[['parm']])){
+    parm = output[['parm']]
   }
   return(list(LP=fnscale*output$LP, Dev=fnscale*output$Dev, Monitor=c(fnscale*output$LP,output$Monitor), yhat=output$yhat, parm=parm))
 }
