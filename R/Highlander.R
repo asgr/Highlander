@@ -3,7 +3,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
                     Niters=c(100,100), NfinalMCMC=Niters[2], walltime = Inf,
                     CMAargs=list(control=list(maxit=Niters[1])),
                     LDargs=list(control=list(abstol=0.1), Iterations=Niters[2], Algorithm='CHARM',
-                    Thinning=1)
+                    Thinning=1), parm.names=NULL
                     ){
 
   timestart = proc.time()[3] # start timer
@@ -30,6 +30,10 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
   if(is.null(parm)){
     stop('parm is NULL!')
+  }
+
+  if(!is.null(parm.names)){
+    names(parm) = parm.names
   }
 
   Data[['applyintervals']] = applyintervals
@@ -248,6 +252,11 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }
 
   RedChi2 = LP_out/(-1.418939 * DataLD[['N']])
+
+  if(!is.null(parm.names)){
+    names(parm_out) = parm.names
+    names(CMAout$par) = parm.names
+  }
 
   time=(proc.time()[3]-timestart)/60
 

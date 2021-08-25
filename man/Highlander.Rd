@@ -13,7 +13,7 @@ Highlander(parm = NULL, Data, likefunc, likefunctype = NULL, liketype = NULL,
   dynlim = 2, ablim = 0, optim_iters = 2, Niters = c(100,100), NfinalMCMC = Niters[2],
   walltime = Inf, CMAargs = list(control=list(maxit=Niters[1])),
   LDargs = list(control=list(abstol=0.1), Iterations = Niters[2],
-  Algorithm = 'CHARM', Thinning = 1)
+  Algorithm = 'CHARM', Thinning = 1), parm.names = NULL
   )
 }
 %- maybe also 'usage' for other objects documented here.
@@ -72,6 +72,9 @@ List; arguments to be passed into \code{\link{cmaeshpc}}.
   \item{LDargs}{
 List; arguments to be passed into \code{\link{LaplacesDemon}}.
 }
+  \item{parm.names}{
+Character vector; optional vector of parameter names. This will over-write the current names in \option{parm} if these also exist. If provided it ensures the \option{parm} and \option{CMA_last$par} outputs are named.
+}
 }
 \details{
 \code{Highlander} is designed to find good global solutions to highly multi-modal likelihood problems. It does this by oscillating between genetic algorithm stages, and classical MCMC stages. The latter produces
@@ -79,9 +82,9 @@ List; arguments to be passed into \code{\link{LaplacesDemon}}.
 \value{
 A list output containing:
 
-\item{parm }{Numeric vector; best \option{parm} of all iterations.}
-\item{LP }{Numeric scalar; best log-posterior of all iterations.}
-\item{diff }{Numeric scalar; LP difference between current best LP and last best LP (if large, might need more \option{optim_iters} and/or \option{Niters}).}
+\item{parm}{Numeric vector; best \option{parm} of all iterations.}
+\item{LP}{Numeric scalar; best log-posterior of all iterations.}
+\item{diff}{Numeric scalar; LP difference between current best LP and last best LP (if large, might need more \option{optim_iters} and/or \option{Niters}).}
 \item{best}{Character scalar; optimisation type of the best solution found, one of 'CMA' / 'LD_Median' / 'LD_Mean'.}
 \item{iteration}{Integer scalar; iteration number of best solution.}
 \item{CMA_last}{List; output of last CMA optimisation (see \code{\link{cmaeshpc}}).}
@@ -99,7 +102,33 @@ Aaron Robotham
 \code{\link{cmaeshpc}}, \code{\link{LaplacesDemon}}
 }
 \examples{
-# Nothing to see here yet!
+# Create some fake data:
+
+mock = list(x=rnorm(1e3, mean=20, sd=100))
+
+# Make a likelihood evaluator:
+
+likefunc = function(parm, Data){
+ sum(dnorm(Data$x, parm[1], parm[2], log=TRUE), na.rm=TRUE)
+}
+
+# Fit it!
+
+highfit = Highlander(parm=c(-1,2), Data=mock, likefunc=likefunc, liketype='max',
+  lower=c(-1e3,1), upper=c(1e3,1e3), parm.names=c('Mean', 'SD'))
+
+# Should be near to 20 (mean) 100 (SD):
+
+highfit$parm
+
+# And we can see the impact of tighter intervals:
+
+highfit = Highlander(parm=c(-1,2), Data=mock, likefunc=likefunc, liketype='max',
+  lower=c(19.9,99), upper=c(20.1,101), parm.names=c('Mean', 'SD'))
+
+highfit$CMA_last$par
+
+highfit$LD_last$Summary1
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
