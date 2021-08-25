@@ -102,11 +102,11 @@ Aaron Robotham
 \code{\link{cmaeshpc}}, \code{\link{LaplacesDemon}}
 }
 \examples{
-# Create some fake data:
+# Create some fake data (note it needs to be a list, but data need not be called 'x'):
 
 mock = list(x=rnorm(1e3, mean=20, sd=100))
 
-# Make a likelihood evaluator:
+# Make a likelihood evaluator (this is the CMA style simple likelihood):
 
 likefunc = function(parm, Data){
  sum(dnorm(Data$x, parm[1], parm[2], log=TRUE), na.rm=TRUE)
