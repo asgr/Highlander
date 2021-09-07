@@ -34,6 +34,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
   if(!is.null(parm.names)){
     names(parm) = parm.names
+  }else if(!is.null(names(parm))){
+    parm.names = names(parm)
   }
 
   Data[['applyintervals']] = applyintervals
