@@ -59,7 +59,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }
   if(is.null(upper)){
     if(!is.null(Data[['intervals']]$hi)){
-      lower = Data[['intervals']]$hi
+      upper = Data[['intervals']]$hi
     }else{
       upper = parm*dynlim
       upper[(parm*(1/dynlim))>upper] = (upper*(1/dynlim))[(upper*(1/dynlim))>upper]
@@ -260,7 +260,10 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     names(CMAout$par) = parm.names
   }
 
-  time=(proc.time()[3]-timestart)/60
+  time = (proc.time()[3]-timestart)/60
+
+  LDout$Model = NULL #don't want this in case it is big!
+  LDout$Call = NULL #don't want this in case it is big!
 
   return(invisible(list(parm=parm_out, LP=LP_out, diff=diff, best=best, iteration=iteration,
                         CMA_last=CMAout, LD_last=LDout, N = DataLD[['N']], RedChi2 = RedChi2, call=call, date=date,
