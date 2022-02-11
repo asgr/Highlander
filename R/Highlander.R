@@ -135,10 +135,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   CMAout = list()
   LDout = list()
 
-  if(keepall){
-    CMAall = list()
-    LDall = list()
-  }
+  CMAall = list()
+  LDall = list()
 
   set.seed(seed)
 
