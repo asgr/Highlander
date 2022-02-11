@@ -3,7 +3,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
                     Niters=c(100,100), NfinalMCMC=Niters[2], walltime = Inf,
                     CMAargs=list(control=list(maxit=Niters[1])),
                     LDargs=list(control=list(abstol=0.1), Iterations=Niters[2], Algorithm='CHARM',
-                    Thinning=1), parm.names=NULL
+                    Thinning=1), parm.names=NULL, keepall=FALSE
                     ){
 
   timestart = proc.time()[3] # start timer
@@ -135,6 +135,11 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   CMAout = list()
   LDout = list()
 
+  if(keepall){
+    CMAall = list()
+    LDall = list()
+  }
+
   set.seed(seed)
 
   for(i in 1:ceiling(optim_iters)){
@@ -177,6 +182,10 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       }
     }
 
+    if(keepall){
+      CMAall = c(CMAall, list(CMAout))
+    }
+
     if(i==1){
       diff=NA
       LP_out = -CMAout[['value']]
@@ -204,6 +213,10 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     if(LDargs[['Iterations']] > 0){
       LDout = do.call('LaplacesDemon', c(list(Model=LDfunc, Data=quote(DataLD),  Initial.Values=parm_out),
                             LDargs))
+
+      if(keepall){
+        LDall = c(LDall, list(LDout))
+      }
 
       if(LP_out < max(LDout[['Monitor']][,1])){
         diff = abs(LP_out - max(LDout[['Monitor']][,1]))
@@ -267,7 +280,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
   return(invisible(list(parm=parm_out, LP=LP_out, diff=diff, best=best, iteration=iteration,
                         CMA_last=CMAout, LD_last=LDout, N = DataLD[['N']], RedChi2 = RedChi2, call=call, date=date,
-                        time=time)))
+                        time=time, CMAall=CMAall, LDall=LDall)))
 }
 
 .convert_CMA2CMA=function(parm, Data, likefunc, liketype='min'){
