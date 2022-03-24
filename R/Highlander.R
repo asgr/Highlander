@@ -135,8 +135,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   CMAout = list()
   LDout = list()
 
-  CMAall = list()
-  LDall = list()
+  CMA_all = list()
+  LD_all = list()
 
   set.seed(seed)
 
@@ -181,7 +181,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     }
 
     if(keepall){
-      CMAall = c(CMAall, list(CMAout))
+      CMA_all = c(CMA_all, list(CMAout))
     }
 
     if(i==1){
@@ -213,7 +213,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
                             LDargs))
 
       if(keepall){
-        LDall = c(LDall, list(LDout))
+        LD_all = c(LD_all, list(LDout))
       }
 
       if(LP_out < max(LDout[['Monitor']][,1])){
@@ -278,7 +278,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
   return(invisible(list(parm=parm_out, LP=LP_out, diff=diff, best=best, iteration=iteration,
                         CMA_last=CMAout, LD_last=LDout, N = DataLD[['N']], RedChi2 = RedChi2, call=call, date=date,
-                        time=time, CMAall=CMAall, LDall=LDall)))
+                        time=time, CMA_all=CMA_all, LD_all=LD_all)))
 }
 
 .convert_CMA2CMA=function(parm, Data, likefunc, liketype='min'){

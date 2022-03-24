@@ -13,7 +13,7 @@ Highlander(parm = NULL, Data, likefunc, likefunctype = NULL, liketype = NULL,
   dynlim = 2, ablim = 0, optim_iters = 2, Niters = c(100,100), NfinalMCMC = Niters[2],
   walltime = Inf, CMAargs = list(control=list(maxit=Niters[1])),
   LDargs = list(control=list(abstol=0.1), Iterations = Niters[2],
-  Algorithm = 'CHARM', Thinning = 1), parm.names = NULL, keepall=FALSE
+  Algorithm = 'CHARM', Thinning = 1), parm.names = NULL, keepall = FALSE
   )
 }
 %- maybe also 'usage' for other objects documented here.
@@ -97,8 +97,8 @@ A list output containing:
 \item{call}{List; the full call made to \code{Highlander}.}
 \item{date}{Date item; the date and time of the call.}
 \item{time}{Numeric scalar; run time in minutes.}
-\item{CMAall}{If \option{keepall} is TRUE then a list of all the CMA runs.}
-\item{LDall}{If \option{keepall} is TRUE then a list of all the LD runs.}
+\item{CMA_all}{If \option{keepall} is TRUE then a list of all the CMA runs.}
+\item{LD_all}{If \option{keepall} is TRUE then a list of all the LD runs.}
 }
 \author{
 Aaron Robotham
