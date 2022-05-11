@@ -64,7 +64,7 @@ Integer vector; number of iterations per CMA and LD respectively (must be length
 Integer scalar; number of iterations to run for the final MCMC run. You might want to make this large if the idea is you are using the previous optimisation steps to find a good starting point, but you want to the final MCMC run using \code{\link{LaplacesDemon}} to provide detailed posterior inference.
 }
   \item{walltime}{
-Numeric scalar; the maximum allowed CPU time for \code{Highlander}. The function will stop with the best solution to date once the walltime has been exceeded (although it does not stop mid CMA or MCMC, so the \option{walltime} will usually be exceeded a bit).
+Numeric scalar; the maximum allowed CPU time for \code{Highlander} in minutes. The function will stop with the best solution to date once the walltime has been exceeded (although it does not stop mid CMA or MCMC, so the \option{walltime} will usually be exceeded a bit).
 }
   \item{CMAargs}{
 List; arguments to be passed into \code{\link{cmaeshpc}}.

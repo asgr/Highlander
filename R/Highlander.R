@@ -143,7 +143,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   for(i in 1:ceiling(optim_iters)){
     message('Iteration ',i)
 
-    time=(proc.time()[3]-timestart)/60
+    time=(proc.time()[3] - timestart)/60
     if(time > walltime){break}
 
     tempsafe = try(
@@ -202,7 +202,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       }
     }
 
-    time=(proc.time()[3]-timestart)/60
+    time = (proc.time()[3] - timestart)/60
     if(time > walltime){break}
     if(i > optim_iters){break}
 
