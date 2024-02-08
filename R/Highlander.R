@@ -17,8 +17,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   # likefunc: likelihood function that takes in parm and Data as arguments; can output CMA scalar of LD list outputs
   # likefunctype: if likefunc outputs just the abs(LP) then 'CMA', if the list for LD then 'LD'
   # seed: random seed to start with
-  # lower: lower limit vector; if NULL it becomes the minimum of parm*(1/dynlim) | parm*dynlim - ablim
-  # upper: upper limit vector; if NULL it becomes the maximum of parm*(1/dynlim) | parm*dynlim + ablim
+  # lower: lower limit vector
+  # upper: upper limit vector
   # dynlim: dynamic range for auto limits (ignored if 1)
   # ablim: additional absolute range for auto limits (ignored if 0)
   # optim_iters: number of CMA / LD loops

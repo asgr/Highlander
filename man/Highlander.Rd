@@ -37,13 +37,13 @@ Character scalar; is the likelihood output by \option{likefunc} defined in a way
 Integer scalar; random seed to start the \code{Highlander} function with.
 }
   \item{lower}{
-Numeric vector; lower limit allowed for \option{parm}; if NULL it becomes the minimum of \option{parm}*(1/\option{dynlim})  - \option{ablim} or \option{parm}*\option{dynlim} - \option{ablim}.
+Numeric vector; lower limit allowed for \option{parm}; if \option{lower} = NULL and Data$intervals$lo = NULL it becomes the minimum of \option{parm}*(1/\option{dynlim})  - \option{ablim} or \option{parm}*\option{dynlim} - \option{ablim}; else if Data$intervals$lo is not NULL then this will be used instead.
 }
   \item{upper}{
-Numeric vector; upper limit allowed for \option{parm}; if NULL it becomes the maximum of \option{parm}*(1/\option{dynlim})  + \option{ablim} or \option{parm}*\option{dynlim} + \option{ablim}.
+Numeric vector; upper limit allowed for \option{parm}; if \option{upper} = NULL and Data$intervals$hi = NULL it becomes the maximum of \option{parm}*(1/\option{dynlim})  + \option{ablim} or \option{parm}*\option{dynlim} + \option{ablim}; else if Data$intervals$hi is not NULL then this will be used instead.
 }
   \item{applyintervals}{
-Logical; should the lower and upper intervals be applied by \code{Highlander} directly? This means it will create the list items Data$intervals$lo = lower and Data$intervals$hi = upper. You might want to set this to FALSE when your likelihood function deals with intervals itself and creating such structures will break functionality inside \option{likefunc} (e.g. this is the case when running with \code{ProFit}).
+Logical; should the lower and upper intervals be applied by \code{Highlander} directly? This means it will create the list items Data$intervals$lo = lower and Data$intervals$hi = upper. You might want to set this to FALSE when your likelihood function deals with intervals itself using a different structure to the Data$intervals and creating such structures will break functionality inside \option{likefunc} (e.g. this is the case when running with \code{ProFit}).
 }
   \item{applyconstraints}{
 Logical; should constraints be applied by \code{Highlander} directly? This means it will pass the current \option{parm} through Data$contraints. You might want to set this to FALSE when your likelihood function deals with constraints itself and applying such structures will break functionality inside \option{likefunc} (e.g. this is the case when running with \code{ProFit}).
