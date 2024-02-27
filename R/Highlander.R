@@ -107,7 +107,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   DataLD = Data
 
   if(likefunctype == 'LD'){
-    DataLD[['mon.names']] = c('LP_mon', DataLD[['mon.names']])
+    DataLD[['mon.names']] = c('LP', DataLD[['mon.names']])
     if(is.null(DataLD[['parm.names']])){
       DataLD[['parm.names']] = letters[1:length(parm)]
     }
@@ -185,7 +185,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     }
 
     if(i==1){
-      diff=NA
+      diff = NA
       LP_out = -CMAout[['value']]
       parm_out = CMAout[['par']]
       best = 'CMA'
