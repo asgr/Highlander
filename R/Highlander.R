@@ -132,8 +132,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
   parm_out = parm
 
-  CMAout = list()
-  LDout = list()
+  CMA_out = list()
+  LD_out = list()
 
   CMA_all = list()
   LD_all = list()
@@ -153,26 +153,26 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
     if(class(tempsafe)=="try-error"){
       message('CMA failed!')
-      CMAout = list(
+      CMA_out = list(
         value = -Inf,
         par = parm_out
       )
     }else{
-      CMAout = tempsafe
-      if(is.null(CMAout[['par']])){ #Catch bad initial starting positions and jitter
+      CMA_out = tempsafe
+      if(is.null(CMA_out[['par']])){ #Catch bad initial starting positions and jitter
         tempsafe = try(
           do.call('cmaeshpc', c(list(par=jitter(parm_out), fn=CMAfunc, Data=quote(DataCMA), lower=lower,
                                      upper=upper), CMAargs))
         )
         if(class(tempsafe)=="try-error"){
           message('CMA failed!')
-          CMAout = list(
+          CMA_out = list(
             value = -Inf,
             par = parm_out
           )
         }else{
-          CMAout = tempsafe
-          if(is.null(CMAout[['par']])){
+          CMA_out = tempsafe
+          if(is.null(CMA_out[['par']])){
             message('CMA is failing- something must be badly wrong!')
             return(NULL)
           }
@@ -181,21 +181,21 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     }
 
     if(keepall){
-      CMA_all = c(CMA_all, list(CMAout))
+      CMA_all = c(CMA_all, list(CMA_out))
     }
 
     if(i==1){
       diff = NA
-      LP_out = -CMAout[['value']]
-      parm_out = CMAout[['par']]
+      LP_out = -CMA_out[['value']]
+      parm_out = CMA_out[['par']]
       best = 'CMA'
       iteration = i
       message('CMA ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
     }else{
-      if(LP_out < -CMAout[['value']]){
-        diff = abs(LP_out - -CMAout[['value']])
-        LP_out = -CMAout[['value']]
-        parm_out = CMAout[['par']]
+      if(LP_out < -CMA_out[['value']]){
+        diff = abs(LP_out - -CMA_out[['value']])
+        LP_out = -CMA_out[['value']]
+        parm_out = CMA_out[['par']]
         best = 'CMA'
         iteration = i
         message('CMA ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
@@ -209,35 +209,38 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     if(i == optim_iters){LDargs[['Iterations']] = NfinalMCMC}
 
     if(LDargs[['Iterations']] > 0){
-      LDout = do.call('LaplacesDemon', c(list(Model=LDfunc, Data=quote(DataLD),  Initial.Values=parm_out),
+      LD_out = do.call('LaplacesDemon', c(list(Model=LDfunc, Data=quote(DataLD),  Initial.Values=parm_out),
                             LDargs))
 
+      LD_out$Model = NULL #don't want this in case it is big!
+      LD_out$Call = NULL #don't want this in case it is big!
+
       if(keepall){
-        LD_all = c(LD_all, list(LDout))
+        LD_all = c(LD_all, list(LD_out))
       }
 
-      if(LP_out < max(LDout[['Monitor']][,1])){
-        diff = abs(LP_out - max(LDout[['Monitor']][,1]))
-        LP_out = max(LDout[['Monitor']][,1])
-        parm_out = LDout$Posterior1[which.max(LDout[['Monitor']][,1]),]
+      if(LP_out < max(LD_out[['Monitor']][,1])){
+        diff = abs(LP_out - max(LD_out[['Monitor']][,1]))
+        LP_out = max(LD_out[['Monitor']][,1])
+        parm_out = LD_out$Posterior1[which.max(LD_out[['Monitor']][,1]),]
         best = 'LD_Mode'
         iteration = i
         message('LD Mode ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
       }
 
-      if(LP_out < LDout$Summary1['LP','Median']){
-        diff = abs(LP_out - LDout$Summary1['LP','Median'])
-        LP_out = LDout$Summary1['LP','Median']
-        parm_out = LDout$Summary1[1:length(parm_out),'Median']
+      if(LP_out < LD_out$Summary1['LP','Median']){
+        diff = abs(LP_out - LD_out$Summary1['LP','Median'])
+        LP_out = LD_out$Summary1['LP','Median']
+        parm_out = LD_out$Summary1[1:length(parm_out),'Median']
         best = 'LD_Median'
         iteration = i
         message('LD Median ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
       }
 
-      if(LP_out < LDout$Summary1['LP','Mean']){
-        diff = abs(LP_out - LDout$Summary1['LP','Mean'])
-        LP_out = LDout$Summary1['LP','Mean']
-        parm_out = LDout$Summary1[1:length(parm_out),'Mean']
+      if(LP_out < LD_out$Summary1['LP','Mean']){
+        diff = abs(LP_out - LD_out$Summary1['LP','Mean'])
+        LP_out = LD_out$Summary1['LP','Mean']
+        parm_out = LD_out$Summary1[1:length(parm_out),'Mean']
         best = 'LD_Mean'
         iteration = i
         message('LD Mean ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
@@ -268,21 +271,18 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
   if(!is.null(parm.names)){
     names(parm_out) = parm.names
-    names(CMAout$par) = parm.names
+    names(CMA_out$par) = parm.names
   }
 
   time = (proc.time()[3]-timestart)/60
 
-  LDout$Model = NULL #don't want this in case it is big!
-  LDout$Call = NULL #don't want this in case it is big!
-
   return(invisible(list(parm=parm_out, LP=LP_out, diff=diff, best=best, iteration=iteration,
-                        CMA_last=CMAout, LD_last=LDout, N = DataLD[['N']], RedChi2 = RedChi2, call=call, date=date,
+                        CMA_last=CMA_out, LD_last=LD_out, N = DataLD[['N']], RedChi2 = RedChi2, call=call, date=date,
                         time=time, CMA_all=CMA_all, LD_all=LD_all)))
 }
 
 .convert_CMA2CMA=function(parm, Data, likefunc, liketype='min'){
-  #Convert CMA type output to LD
+  # Convert CMA type output to LD
   output = likefunc(parm, Data)
   if(liketype=='min'){
     fnscale = 1
@@ -293,7 +293,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 }
 
 .convert_CMA2LD=function(parm, Data, likefunc, liketype='min'){
-  #Convert CMA type output to LD
+  # Convert CMA type output to LD
   if(Data[['applyconstraints']] & !is.null(Data[['constraints']])){
     parm = Data[['constraints']](parm)
   }
@@ -312,7 +312,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 }
 
 .convert_LD2CMA=function(parm, Data, likefunc, liketype='min'){
-  #Convert LD type output to CMA
+  # Convert LD type output to CMA
   output = likefunc(parm, Data)
   if(liketype=='min'){
     fnscale = 1
@@ -323,7 +323,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 }
 
 .convert_LD2LD=function(parm, Data, likefunc, liketype='min'){
-  #Convert LD type output to LD
+  # Convert LD type output to LD
   if(Data[['applyconstraints']] & !is.null(Data[['constraints']])){
     parm = Data[['constraints']](parm)
   }
@@ -333,18 +333,27 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     parm[parm>Data[['intervals']]$hi] = Data[['intervals']]$hi[parm>Data[['intervals']]$hi]
   }
   if(length(Data[['mon.names']]) > 1){
+    # This is so we remove the leading LP internally since some
+    # likefunc actually use the contents of mon.names to determine outputs
     Data[['mon.names']] = Data[['mon.names']][2:length(Data[['mon.names']])]
   }else{
     Data[['mon.names']] = ''
   }
+
   output = likefunc(parm, Data)
+
+
+
   if(liketype=='min'){
     fnscale = -1
   }else if(liketype=='max'){
     fnscale = 1
   }
+
   if(!is.null(output[['parm']])){
     parm = output[['parm']]
   }
+
+  # We add the expected LP back to the frong of Monitor output
   return(list(LP=fnscale*output$LP, Dev=fnscale*output$Dev, Monitor=c(fnscale*output$LP,output$Monitor), yhat=output$yhat, parm=parm))
 }
