@@ -12,38 +12,6 @@ In recent work fitting spectral energy distributions with **ProSpect** we nearly
 
 ## Installation
 
-### Getting R
-
-First things first, you will probably want to install a recent version of **R** that lets you build packages from source. The advantage of choosing this route is you can then update bleeding edge versions directly from GitHub. If you rely on the pre-built binaries on CRAN you might be waiting much longer.
-
-#### Mac
-
-For Mac just get the latest binaries from the **R** project pages:
-
-<https://cloud.r-project.org/bin/macosx/>
-
-#### Windows
-
-For Windows just get the latest binaries from the **R** project pages:
-
-<https://cloud.r-project.org/bin/windows/>
-
-#### Linux
-
-Debian:	`sudo apt-get install r-base r-base-dev`
-
-Fedora:	`sudo yum install R`
-
-Suse:	More of a pain, see here <https://cloud.r-project.org/bin/linux/suse/README.html>
-
-Ubuntu:	`sudo apt-get install r-base-dev`
-
-All the info on binaries is here: <https://cloud.r-project.org/bin/linux/>
-
-If you have a poorly supported version of Linux (e.g. CentOS) you will need to install **R** from source with the development flags (this bit is important). You can read more here: <https://cloud.r-project.org/sources.html>
-
-Now you have the development version of **R** installed (hopefully) I would also suggest you get yourself **R-Studio**. It is a very popular and well maintained **R** IDE that gives you a lot of helpful shortcuts to scripting and analysing with **R**. The latest version can be grabbed from <https://www.rstudio.com/products/rstudio/> where you almost certainly want the free Desktop version.
-
 ### Getting Highlander
 
 Source installation from GitHub should be easy:
