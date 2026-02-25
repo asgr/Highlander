@@ -43,7 +43,17 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck, any::knitr, any::rmarkdown
+          extra-packages: any::rcmdcheck,
+            github::asgr/ProSpectData@main,
+            github::asgr/Rwcs@master,
+            github::asgr/Rfits@master,
+            github::ICRAR/ProFit@master,
+            github::asgr/cmaeshpc@master,
+            github::asgr/Highlander@master,
+            github::asgr/hyper.fit@master,
+            github::asgr/ParmOff@main,
+            any::magicaxis, any::celestial,
+            any::knitr, any::rmarkdown
 
       - uses: r-lib/actions/check-r-package@v2
         with:
