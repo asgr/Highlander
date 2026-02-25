@@ -46,7 +46,7 @@ jobs:
           dependencies: '"hard"'
           extra-packages: any::rcmdcheck,
             github::asgr/cmaeshpc@master,
-            any::ProSpect,
+            github::asgr/ProSpect@master,
             any::magicaxis,
             any::celestial,
             any::foreach,
