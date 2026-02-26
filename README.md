@@ -62,9 +62,10 @@ Failing all of the above, please email me for help (or perhaps raise an Issue he
 The above should also install the required packages. If you have trouble with this you can try installing the required packages manually first and then retry the installation for **Highlander**:
 
 ```R
-install.packages(c('LaplacesDemon', 'cmaeshpc')) # Required packages
-install.packages(c('knitr', 'magicaxis', 'ProSpect', 'celestial', 'foreach', 'rmarkdown')) # Suggested packages
+install.packages(c('knitr', 'magicaxis', 'ProSpect', 'celestial', 'foreach', 'rmarkdown')) # CRAN packages
 install.packages('remotes')
+remotes::install_github("asgr/LaplacesDemon")
+remotes::install_github("asgr/cmaeshpc")
 remotes::install_github("asgr/Highlander")
 ```
 
