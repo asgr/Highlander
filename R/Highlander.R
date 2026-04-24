@@ -160,7 +160,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       if(class(tempsafe)=="try-error"){
         message('CMA failed!')
         CMA_out = list(
-          value = -Inf,
+          value = Inf,
           par = parm_out
         )
       }else{
@@ -173,7 +173,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
           if(class(tempsafe)=="try-error"){
             message('CMA failed!')
             CMA_out = list(
-              value = -Inf,
+              value = Inf,
               par = parm_out
             )
           }else{
