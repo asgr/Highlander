@@ -11,25 +11,24 @@ Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
     stop("'lower' and 'upper' must be numeric vectors of the same length (> 0) with no NA values.")
   }
 
-  Nsamp = as.integer(Nsamp)
-  if (length(Nsamp) != 1L || is.na(Nsamp) || Nsamp < 1L) {
+  Nsamp_num = suppressWarnings(as.numeric(Nsamp))
+  if (length(Nsamp_num) != 1L || is.na(Nsamp_num) || !is.finite(Nsamp_num) ||
+      Nsamp_num < 1 || !identical(Nsamp_num, as.numeric(as.integer(Nsamp_num)))) {
     stop("'Nsamp' must be a positive integer (>= 1).")
   }
+  Nsamp = as.integer(Nsamp_num)
 
   if (length(pcut) != 1L || is.na(as.numeric(pcut)) || as.numeric(pcut) <= 0 || as.numeric(pcut) >= 1) {
     stop("'pcut' must be a number strictly between 0 and 1.")
   }
   pcut = as.numeric(pcut)
 
-  ncores = as.integer(ncores)
-  if (length(ncores) != 1L || is.na(ncores) || ncores < 1L) {
+  ncores_num = suppressWarnings(as.numeric(ncores))
+  if (length(ncores_num) != 1L || is.na(ncores_num) || !is.finite(ncores_num) ||
+      ncores_num < 1 || !identical(ncores_num, as.numeric(as.integer(ncores_num)))) {
     stop("'ncores' must be a positive integer.")
   }
-
-  # Check lhs package is available
-  if (!requireNamespace("lhs", quietly = TRUE)) {
-    stop("The 'lhs' package is required but not installed. Install it with: install.packages('lhs')")
-  }
+  ncores = as.integer(ncores_num)
 
   Npar = length(lower)
 
@@ -38,9 +37,23 @@ Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
     set.seed(seed)
   }
 
-  # Generate LHS if not supplied
+  # Generate LHS if not supplied; only require lhs package when needed
   if (is.null(latin)) {
+    if (!requireNamespace("lhs", quietly = TRUE)) {
+      stop("The 'lhs' package is required to generate LHS designs but is not installed. ",
+           "Install it with: install.packages('lhs')")
+    }
     latin = lhs::randomLHS(Nsamp, Npar)
+  } else {
+    # Validate user-supplied latin: must be a numeric matrix of the right shape with values in [0, 1]
+    if (!is.matrix(latin) || !is.numeric(latin) ||
+        nrow(latin) != Nsamp || ncol(latin) != Npar) {
+      stop(paste0("'latin' must be a numeric matrix with ", Nsamp, " rows (Nsamp) ",
+                  "and ", Npar, " columns (length(lower))."))
+    }
+    if (anyNA(latin) || any(latin < 0 | latin > 1)) {
+      stop("All values in 'latin' must be finite numbers in [0, 1] with no NAs.")
+    }
   }
 
   # Map unit-cube LHS samples to physical parameter bounds
