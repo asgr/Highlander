@@ -8,7 +8,7 @@ Maintainer: Aaron Robotham <aaron.robotham@uwa.edu.au>
 Description: There Can be Only One! Finds the highest points in log-likelihood space by switching between CMA and MCMC phases. Defaults should work pretty well.
 License: LGPL-3
 Imports: LaplacesDemon, cmaeshpc
-Suggests: knitr, magicaxis, ProSpect, celestial, foreach, rmarkdown
+Suggests: knitr, magicaxis, ProSpect, celestial, foreach, rmarkdown, lhs
 Remotes:
   asgr/cmaeshpc,
   asgr/LaplacesDemon
