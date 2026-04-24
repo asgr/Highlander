@@ -132,11 +132,16 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
   parm_out = parm
 
-  CMA_out = list()
+  CMA_out = NULL
   LD_out = list()
 
   CMA_all = list()
   LD_all = list()
+
+  LP_out = -Inf
+  diff = NA
+  best = NA
+  iteration = NA
 
   set.seed(seed)
 
@@ -146,59 +151,61 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     time=(proc.time()[3] - timestart)/60
     if(time > walltime){break}
 
-    tempsafe = try(
-      do.call('cmaeshpc', c(list(par=parm_out, fn=CMAfunc, Data=quote(DataCMA), lower=lower,
-           upper=upper), CMAargs))
-    )
-
-    if(class(tempsafe)=="try-error"){
-      message('CMA failed!')
-      CMA_out = list(
-        value = -Inf,
-        par = parm_out
+    if(Niters[1] > 0){
+      tempsafe = try(
+        do.call('cmaeshpc', c(list(par=parm_out, fn=CMAfunc, Data=quote(DataCMA), lower=lower,
+             upper=upper), CMAargs))
       )
-    }else{
-      CMA_out = tempsafe
-      if(is.null(CMA_out[['par']])){ #Catch bad initial starting positions and jitter
-        tempsafe = try(
-          do.call('cmaeshpc', c(list(par=jitter(parm_out), fn=CMAfunc, Data=quote(DataCMA), lower=lower,
-                                     upper=upper), CMAargs))
+
+      if(class(tempsafe)=="try-error"){
+        message('CMA failed!')
+        CMA_out = list(
+          value = -Inf,
+          par = parm_out
         )
-        if(class(tempsafe)=="try-error"){
-          message('CMA failed!')
-          CMA_out = list(
-            value = -Inf,
-            par = parm_out
+      }else{
+        CMA_out = tempsafe
+        if(is.null(CMA_out[['par']])){ #Catch bad initial starting positions and jitter
+          tempsafe = try(
+            do.call('cmaeshpc', c(list(par=jitter(parm_out), fn=CMAfunc, Data=quote(DataCMA), lower=lower,
+                                       upper=upper), CMAargs))
           )
-        }else{
-          CMA_out = tempsafe
-          if(is.null(CMA_out[['par']])){
-            message('CMA is failing- something must be badly wrong!')
-            return(NULL)
+          if(class(tempsafe)=="try-error"){
+            message('CMA failed!')
+            CMA_out = list(
+              value = -Inf,
+              par = parm_out
+            )
+          }else{
+            CMA_out = tempsafe
+            if(is.null(CMA_out[['par']])){
+              message('CMA is failing- something must be badly wrong!')
+              return(NULL)
+            }
           }
         }
       }
-    }
 
-    if(keepall){
-      CMA_all = c(CMA_all, list(CMA_out))
-    }
+      if(keepall){
+        CMA_all = c(CMA_all, list(CMA_out))
+      }
 
-    if(i==1){
-      diff = NA
-      LP_out = -CMA_out[['value']]
-      parm_out = CMA_out[['par']]
-      best = 'CMA'
-      iteration = i
-      message('CMA ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
-    }else{
-      if(LP_out < -CMA_out[['value']]){
-        diff = abs(LP_out - -CMA_out[['value']])
+      if(i==1){
+        diff = NA
         LP_out = -CMA_out[['value']]
         parm_out = CMA_out[['par']]
         best = 'CMA'
         iteration = i
         message('CMA ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
+      }else{
+        if(LP_out < -CMA_out[['value']]){
+          diff = abs(LP_out - -CMA_out[['value']])
+          LP_out = -CMA_out[['value']]
+          parm_out = CMA_out[['par']]
+          best = 'CMA'
+          iteration = i
+          message('CMA ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
+        }
       }
     }
 
@@ -271,7 +278,9 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
   if(!is.null(parm.names)){
     names(parm_out) = parm.names
-    names(CMA_out$par) = parm.names
+    if(!is.null(CMA_out)){
+      names(CMA_out$par) = parm.names
+    }
   }
 
   time = (proc.time()[3]-timestart)/60
