@@ -88,6 +88,7 @@ An invisible list containing:
 
 \item{lower}{Numeric vector; new lower bounds (column-wise min of kept samples).}
 \item{upper}{Numeric vector; new upper bounds (column-wise max of kept samples).}
+\item{best}{Numeric vector; current 'best' parameters in \option{latin_mod}.}
 \item{output}{Numeric vector; \option{likefunc} values for all \option{Nsamp} samples.}
 \item{keep}{Integer vector; indices of the kept samples.}
 \item{frac_keep}{Numeric scalar; \code{length(keep) / Nsamp}.}
@@ -106,14 +107,15 @@ library(lhs)
 
 # Simple 2-parameter example: find bounds around the minimum of a quadratic
 likefunc = function(parm, Data) {
-  sum((parm - Data$target)^2)
+  sum((parm - Data)^2)
 }
 
-Data = list(target = c(2, 5))
+Data = c(2, 5) #Try with more numbers and see how rapidly this becomes 'hard'
+Ndata = length(Data)
 
 result = Lowlander(
-  lower = c(0, 0), upper = c(10, 10),
-  Nsamp = 1000, pcut = 0.01,
+  lower = rep(0, Ndata), upper = rep(10, Ndata),
+  Nsamp = 1000, pcut = 0.05,
   likefunc = likefunc, Data = Data,
   liketype = 'min', seed = 42
 )
@@ -121,6 +123,7 @@ result = Lowlander(
 # New bounds should be tighter and centred near c(2, 5):
 result$lower
 result$upper
+result$best
 result$frac_keep
 }
 \concept{ optimisation }

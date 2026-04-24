@@ -79,9 +79,11 @@ Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
   if (liketype == 'min') {
     cutval = as.numeric(quantile(output, pcut, na.rm = TRUE))
     keep = which(output <= cutval)
+    best = latin_mod[which.min(output),]
   } else if (liketype == 'max') {
     cutval = as.numeric(quantile(output, 1 - pcut, na.rm = TRUE))
     keep = which(output >= cutval)
+    best = latin_mod[which.max(output),]
   } else {
     stop("'liketype' must be 'min' or 'max'.")
   }
@@ -105,6 +107,7 @@ Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
   return(invisible(list(
     lower     = new_lower,
     upper     = new_upper,
+    best      = best,
     output    = output,
     keep      = keep,
     frac_keep = frac_keep,
