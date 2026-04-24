@@ -14,7 +14,7 @@ tightened bounds equal to the column-wise min/max of the most plausible
 \usage{
 Lowlander(lower, upper, Nsamp = 100, pcut = 0.1,
           likefunc, Data, liketype = 'min',
-          seed = NULL, latin = NULL, ncores = 1)
+          seed = 666, latin = NULL, ncores = 1)
 }
 \arguments{
   \item{lower}{
@@ -64,6 +64,7 @@ Unix-like systems \code{parallel::mclapply} is used.
 }
 \details{
 The workflow is:
+
 \enumerate{
   \item Optionally set the RNG seed.
   \item Generate (or validate) an \option{Nsamp} x \option{Npar} Latin
@@ -79,6 +80,8 @@ The workflow is:
         column-wise min/max bounds can be computed.
   \item Return new bounds and bookkeeping information.
 }
+
+Conceptually this function is used to create reasonable bounds for \code{\link{Highlander}} if the user really has no sense of plausible parameter regimes.
 }
 \value{
 An invisible list containing:
@@ -91,7 +94,6 @@ An invisible list containing:
 \item{cutval}{Numeric scalar; quantile threshold used to determine \code{keep}.}
 \item{latin}{Numeric matrix; the \option{Nsamp} x \option{Npar} unit-cube LHS design used.}
 \item{latin_mod}{Numeric matrix; the \option{Nsamp} x \option{Npar} parameter matrix mapped to physical bounds.}
-\item{kept_pars}{Numeric matrix; \code{latin_mod[keep, , drop=FALSE]} — the kept parameter vectors.}
 }
 \author{
 Aaron Robotham
@@ -100,6 +102,8 @@ Aaron Robotham
 \code{\link{Highlander}}, \code{\link[lhs]{randomLHS}}
 }
 \examples{
+library(lhs)
+
 # Simple 2-parameter example: find bounds around the minimum of a quadratic
 likefunc = function(parm, Data) {
   sum((parm - Data$target)^2)
@@ -109,7 +113,7 @@ Data = list(target = c(2, 5))
 
 result = Lowlander(
   lower = c(0, 0), upper = c(10, 10),
-  Nsamp = 200, pcut = 0.1,
+  Nsamp = 1000, pcut = 0.01,
   likefunc = likefunc, Data = Data,
   liketype = 'min', seed = 42
 )
