@@ -1,6 +1,6 @@
 Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
                      likefunc, Data, liketype = 'min',
-                     seed = NULL, latin = NULL, ncores = 1) {
+                     seed = 666, latin = NULL, ncores = 1L) {
 
   # Input validation
   lower = as.numeric(lower)
@@ -23,12 +23,10 @@ Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
   }
   pcut = as.numeric(pcut)
 
-  ncores_num = suppressWarnings(as.numeric(ncores))
-  if (length(ncores_num) != 1L || is.na(ncores_num) || !is.finite(ncores_num) ||
-      ncores_num < 1 || !identical(ncores_num, as.numeric(as.integer(ncores_num)))) {
-    stop("'ncores' must be a positive integer.")
+  ncores = as.integer(ncores)
+  if (ncores < 1 ) {
+    stop("'ncores' must be integer >= 1.")
   }
-  ncores = as.integer(ncores_num)
 
   Npar = length(lower)
 
@@ -47,9 +45,9 @@ Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
   } else {
     # Validate user-supplied latin: must be a numeric matrix of the right shape with values in [0, 1]
     if (!is.matrix(latin) || !is.numeric(latin) ||
-        nrow(latin) != Nsamp || ncol(latin) != Npar) {
-      stop(paste0("'latin' must be a numeric matrix with ", Nsamp, " rows (Nsamp) ",
-                  "and ", Npar, " columns (length(lower))."))
+        nrow(latin) < Nsamp || ncol(latin) < Npar) {
+      stop(paste0("'latin' must be a numeric matrix with at least", Nsamp, " rows (Nsamp) ",
+                  "andat least", Npar, " columns (length(lower))."))
     }
     if (anyNA(latin) || any(latin < 0 | latin > 1)) {
       stop("All values in 'latin' must be finite numbers in [0, 1] with no NAs.")
@@ -112,7 +110,6 @@ Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
     frac_keep = frac_keep,
     cutval    = cutval,
     latin     = latin,
-    latin_mod = latin_mod,
-    kept_pars = kept_pars
+    latin_mod = latin_mod
   )))
 }
