@@ -90,8 +90,8 @@ A list output containing:
 \item{diff}{Numeric scalar; LP difference between current best LP and last best LP (if large, might need more \option{optim_iters} and/or \option{Niters}).}
 \item{best}{Character scalar; optimisation type of the best solution found, one of 'CMA' / 'LD_Median' / 'LD_Mean'.}
 \item{iteration}{Integer scalar; iteration number of best solution.}
-\item{CMA_last}{List; output of last CMA optimisation (see \code{\link{cmaeshpc}}).}
-\item{LD_last}{List; output of last MCMC optimisation (see \code{\link{LaplacesDemon}}).}
+\item{CMA_last}{List; output of last CMA optimisation (see \code{\link[cmaeshpc]{cmaeshpc}}).}
+\item{LD_last}{List; output of last MCMC optimisation (see \code{\link[LaplacesDemon]{LaplacesDemon}}).}
 \item{N}{Integer scalar; number of observations (approximately the degrees of freedom).}
 \item{RedChi2}{Numeric scalar; the approximate reduced Chi^2 of the fit (more for reference than use).}
 \item{call}{List; the full call made to \code{Highlander}.}
@@ -104,7 +104,7 @@ A list output containing:
 Aaron Robotham
 }
 \seealso{
-\code{\link{cmaeshpc}}, \code{\link{LaplacesDemon}}
+\code{\link[cmaeshpc]{cmaeshpc}}, \code{\link[LaplacesDemon]{LaplacesDemon}}
 }
 \examples{
 # Create some fake data (note it needs to be a list, but data need not be called 'x'):
