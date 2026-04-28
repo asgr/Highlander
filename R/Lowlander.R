@@ -1,5 +1,5 @@
-Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
-                     likefunc, Data, liketype = 'min',
+Lowlander = function(lower, upper, Nsamp = 'auto', pcut = 0.1, corcut = 0,
+                     likefunc, Data, liketype = 'min', parm.names = NULL,
                      seed = 666, latin = NULL, ncores = 1L) {
 
   # Input validation
@@ -11,12 +11,18 @@ Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
     stop("'lower' and 'upper' must be numeric vectors of the same length (> 0) with no NA values.")
   }
 
-  Nsamp_num = suppressWarnings(as.numeric(Nsamp))
-  if (length(Nsamp_num) != 1L || is.na(Nsamp_num) || !is.finite(Nsamp_num) ||
-      Nsamp_num < 1 || !identical(Nsamp_num, as.numeric(as.integer(Nsamp_num)))) {
-    stop("'Nsamp' must be a positive integer (>= 1).")
+  if(is.character(Nsamp)){
+    if(Nsamp[1] == 'auto'){
+      Nsamp = min(50L * length(lower), 2000L)
+    }else{
+      stop("Nsamp must be a positive integer (>= 1) or 'auto'.")
+    }
   }
-  Nsamp = as.integer(Nsamp_num)
+
+  if (length(Nsamp) != 1L || is.na(Nsamp) || !is.finite(Nsamp)) {
+    stop("Nsamp must be a positive integer (>= 1) or 'auto'.")
+  }
+  Nsamp = as.integer(Nsamp)
 
   if (length(pcut) != 1L || is.na(as.numeric(pcut)) || as.numeric(pcut) <= 0 || as.numeric(pcut) >= 1) {
     stop("'pcut' must be a number strictly between 0 and 1.")
@@ -35,6 +41,11 @@ Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
     set.seed(seed)
   }
 
+  if (!is.null(parm.names) && length(parm.names) != Npar){
+    stop("parm.names must be NULL or have length equal to number of parameters.")
+  }
+
+
   # Generate LHS if not supplied; only require lhs package when needed
   if (is.null(latin)) {
     if (!requireNamespace("lhs", quietly = TRUE)) {
@@ -44,18 +55,25 @@ Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
     latin = lhs::randomLHS(Nsamp, Npar)
   } else {
     # Validate user-supplied latin: must be a numeric matrix of the right shape with values in [0, 1]
-    if (!is.matrix(latin) || !is.numeric(latin) ||
-        nrow(latin) < Nsamp || ncol(latin) < Npar) {
+    if (!is.matrix(latin) || !is.numeric(latin) || nrow(latin) < Nsamp || ncol(latin) < Npar) {
       stop(paste0("'latin' must be a numeric matrix with at least", Nsamp, " rows (Nsamp) ",
                   "andat least", Npar, " columns (length(lower))."))
     }
     if (anyNA(latin) || any(latin < 0 | latin > 1)) {
       stop("All values in 'latin' must be finite numbers in [0, 1] with no NAs.")
     }
+    if(dim(latin)[2] > Npar){
+      latin = latin[,1:Npar]
+    }
   }
+
+  colnames(latin) = parm.names
 
   # Map unit-cube LHS samples to physical parameter bounds
   latin_mod = matrix(NA_real_, nrow = Nsamp, ncol = Npar)
+
+  colnames(latin_mod) = parm.names
+
   for (j in seq_len(Npar)) {
     latin_mod[, j] = lower[j] + latin[, j] * (upper[j] - lower[j])
   }
@@ -76,14 +94,31 @@ Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
   }
 
   # Determine which samples to keep based on quantile cut
+  good = is.finite(output)
+  output_good = output[good]
+  latin_mod_good = latin_mod[good,]
+
+  cor_data = suppressWarnings(
+    cor(cbind(latin_mod_good, output_good), use = "pairwise.complete.obs")
+  )
+
+
+  if(!is.null(parm.names)){
+    colnames(cor_data) = c(parm.names, 'Out')
+    rownames(cor_data) = c(parm.names, 'Out')
+  }else{
+    colnames(cor_data) = NULL
+    rownames(cor_data) = NULL
+  }
+
   if (liketype == 'min') {
-    cutval = as.numeric(quantile(output, pcut, na.rm = TRUE))
-    keep = which(output <= cutval)
-    best = latin_mod[which.min(output),]
+    cutval = as.numeric(quantile(output_good, pcut, na.rm = TRUE))
+    keep = which(output <= cutval & good) #this is correct since we want IDs rel to original output rowID
+    best = latin_mod_good[which.min(output_good),]
   } else if (liketype == 'max') {
-    cutval = as.numeric(quantile(output, 1 - pcut, na.rm = TRUE))
-    keep = which(output >= cutval)
-    best = latin_mod[which.max(output),]
+    cutval = as.numeric(quantile(output_good, 1 - pcut, na.rm = TRUE))
+    keep = which(output >= cutval & good) #this is correct since we want IDs rel to original output rowID
+    best = latin_mod_good[which.max(output_good),]
   } else {
     stop("'liketype' must be 'min' or 'max'.")
   }
@@ -102,6 +137,14 @@ Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
   new_lower = apply(kept_pars, 2, min)
   new_upper = apply(kept_pars, 2, max)
 
+  if(corcut > 0){
+    cor_sel = is.finite(cor_data[1:Npar, Npar + 1L]) & (abs(cor_data[1:Npar, (Npar + 1L)]) < corcut)
+    new_lower[cor_sel] = lower[cor_sel]
+    new_upper[cor_sel] = upper[cor_sel]
+  }
+
+  vol_red = prod(new_upper - new_lower) / prod(upper - lower)
+
   frac_keep = as.numeric(length(keep) / Nsamp)
 
   return(invisible(list(
@@ -110,8 +153,11 @@ Lowlander = function(lower, upper, Nsamp = 100, pcut = 0.1,
     best      = best,
     output    = output,
     keep      = keep,
+    bad       = which(!good),
+    vol_red   = vol_red,
     frac_keep = frac_keep,
     cutval    = cutval,
+    cor_data  = cor_data,
     latin     = latin,
     latin_mod = latin_mod
   )))
