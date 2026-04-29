@@ -14,7 +14,7 @@ Highlander(parm = NULL, Data, likefunc, likefunctype = NULL, liketype = NULL,
   walltime = Inf, CMAargs = list(control=list(maxit=Niters[1])),
   LDargs = list(control=list(abstol=0.1), Iterations = Niters[2],
   Algorithm = 'CHARM', Thinning = 1), parm.names = NULL, keepall = FALSE,
-  cores = 1L, keep_all = FALSE
+  cores = 1L
   )
 }
 %- maybe also 'usage' for other objects documented here.
@@ -77,13 +77,10 @@ List; arguments to be passed into \code{\link[LaplacesDemon]{LaplacesDemon}}.
 Character vector; optional vector of parameter names. This will over-write the current names in \option{parm} if these also exist. If provided it ensures the \option{parm} and \option{CMA_last$par} outputs are named.
 }
   \item{keepall}{
-Logical; if FALSE (default) then does nothing. If TRUE then output objects \option{CMAall} and \option{LDall} will be concatenated lists of all CMA and LD iterations respectively.
+Logical; if FALSE (default) then does nothing extra. If TRUE then: in serial mode (\option{cores} = 1) output objects \option{CMA_all} and \option{LD_all} will be concatenated lists of all CMA and LD iterations respectively; in parallel mode (\option{cores} > 1) the full list of all chain outputs is also returned as \option{High_jobs}, making it easy to inspect or compare individual chains.
 }
   \item{cores}{
 Positive integer scalar; number of CPU cores to use (default 1). When \option{cores} > 1, \code{Highlander} runs \option{cores} independent optimisation chains in parallel, each starting from a different random seed (\option{seed}, \option{seed}+1, ..., \option{seed}+\option{cores}-1), and returns the chain that achieved the highest LP. On Windows a PSOCK cluster is used (requires the \pkg{Highlander} package to be installed); on Unix-like systems (Linux, macOS) \code{parallel::mclapply} is used. Setting \option{cores} = 1 (the default) gives identical serial behaviour to previous versions and requires no special setup.
-}
-  \item{keep_all}{
-Logical; only relevant when \option{cores} > 1. If FALSE (default) only the best chain output is returned. If TRUE the full list of all chain outputs is also returned as \option{High_jobs}, making it easy to inspect or compare individual chains. The index of the winning chain is always reported in \option{best_job} when \option{cores} > 1, regardless of this setting.
 }
 }
 \details{
@@ -107,7 +104,7 @@ A list output containing:
 \item{CMA_all}{If \option{keepall} is TRUE then a list of all the CMA runs.}
 \item{LD_all}{If \option{keepall} is TRUE then a list of all the LD runs.}
 \item{best_job}{Integer scalar; present when \option{cores} > 1. Index (1-based) of the parallel chain that achieved the highest LP.}
-\item{High_jobs}{List; present when \option{cores} > 1 and \option{keep_all} = TRUE. Contains the full \code{Highlander} output list for every parallel chain, in chain order. Use \option{best_job} to select the winning chain: \code{High_out$High_jobs[[High_out$best_job]]}.}
+\item{High_jobs}{List; present when \option{cores} > 1 and \option{keepall} = TRUE. Contains the full \code{Highlander} output list for every parallel chain, in chain order. Use \option{best_job} to select the winning chain: \code{High_out$High_jobs[[High_out$best_job]]}.}
 }
 \author{
 Aaron Robotham
