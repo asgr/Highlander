@@ -57,6 +57,11 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     best_result$call = call
     best_result$date = date
     best_result$time = (proc.time()[3] - timestart) / 60
+    best_result$best_job = best_idx
+
+    if(keepall){
+      best_result$High_jobs = results
+    }
 
     return(invisible(best_result))
   }
