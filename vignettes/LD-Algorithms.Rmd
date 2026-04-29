@@ -1,0 +1,1351 @@
+---
+title: "MCMC Algorithms in LaplacesDemon"
+author: "Aaron Robotham"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+vignette: |
+  %\VignetteIndexEntry{MCMC Algorithms in LaplacesDemon}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+```
+
+# Introduction
+
+Markov Chain Monte Carlo (MCMC) is the engine that drives Bayesian
+posterior inference in **LaplacesDemon**.  The main entry point —
+`LaplacesDemon()` — exposes a rich collection of MCMC algorithms through
+its `Algorithm` argument.  Choosing the right algorithm for a given
+problem can dramatically affect mixing, convergence speed, and
+computational cost.
+
+This vignette provides a comprehensive, mathematically-oriented
+description of every algorithm currently available via the `Algorithm`
+argument, together with practical guidance on when and how to use each
+one.  The algorithms are grouped by conceptual family to make it easier
+to navigate the large menu.
+
+## Notation
+
+Throughout this document we use the following notation:
+
+- $\theta \in \mathbb{R}^d$ — the parameter vector of dimension $d$.
+- $\pi(\theta)$ — the unnormalised target (posterior) density, evaluated
+  on the log scale as $\log\pi(\theta)$ (`LP` in **LaplacesDemon**).
+- $q(\theta' \mid \theta)$ — the proposal density.
+- $\alpha(\theta, \theta')$ — the Metropolis–Hastings acceptance
+  probability.
+- $U(\theta) = -\log\pi(\theta)$ — the potential energy function (used
+  in Hamiltonian samplers).
+- $K(p) = \frac{1}{2}p^T M^{-1} p$ — the kinetic energy, where $p$ is
+  the auxiliary momentum and $M$ is a mass matrix.
+
+## Using the `Algorithm` Argument
+
+The algorithm is selected by passing a character string to the
+`Algorithm` argument of `LaplacesDemon()`:
+
+```{r demo-usage}
+library(LaplacesDemon)
+
+Fit <- LaplacesDemon(
+  Model,
+  Data        = MyData,
+  Initial.Values = iv,
+  Iterations  = 10000,
+  Thinning    = 10,
+  Algorithm   = "CHARM",          # <-- select algorithm here
+  Specs       = list(B = NULL)    # <-- algorithm-specific specs
+)
+```
+
+Each algorithm may require a different `Specs` list.  The required and
+optional elements of `Specs` for every algorithm are documented below.
+
+---
+
+# Metropolis–Hastings Algorithms
+
+The Metropolis–Hastings (MH) framework (Metropolis et al. 1953; Hastings 1970)
+forms the foundation for the largest family of algorithms in
+**LaplacesDemon**.  A proposal $\theta'$ is drawn from
+$q(\theta' \mid \theta^{(t)})$ and accepted with probability
+
+$$
+\alpha = \min\!\left(1,\;
+  \frac{\pi(\theta')\,q(\theta^{(t)} \mid \theta')}
+       {\pi(\theta^{(t)})\,q(\theta' \mid \theta^{(t)})}
+\right).
+$$
+
+When $q$ is symmetric the ratio $q(\theta^{(t)} \mid \theta') /
+q(\theta' \mid \theta^{(t)})$ drops out, giving the original Metropolis
+acceptance ratio.
+
+## Random-Walk Metropolis (`RWM`)
+
+**Description.**  The simplest MH variant.  A zero-mean, isotropic
+Gaussian perturbation is added to the current state:
+
+$$
+\theta' = \theta^{(t)} + \epsilon, \qquad
+\epsilon \sim \mathcal{N}(0,\,\Sigma).
+$$
+
+For well-tuned proposals the optimal acceptance rate is approximately
+23.4% for high-dimensional targets (Roberts et al. 1997).
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `B`  | Optional list of parameter blocks. Each block is updated as a group. |
+
+**When to use.**  Good default choice for low- to moderate-dimensional
+problems when no gradient information is available.  Requires careful
+tuning of $\Sigma$ for efficiency.
+
+```{r rwm}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "RWM",
+  Specs     = list(B = NULL))
+```
+
+## Independence Metropolis (`IM`)
+
+**Description.**  Proposals are drawn from a fixed distribution
+$q(\theta')$ that does not depend on the current state.  This is
+equivalent to importance sampling within an MH accept/reject step.  It
+is most efficient when $q$ closely approximates $\pi$, and can be used
+with a multivariate normal or t proposal centred on the posterior mode.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `mu` | Mean of the multivariate proposal distribution (usually the posterior mode). |
+
+**When to use.**  Useful when a good approximation to $\pi$ is
+available (e.g., from `LaplaceApproximation()`).  Poor mixing when $q$
+deviates substantially from $\pi$.
+
+```{r im}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "IM",
+  Specs     = list(mu = posterior_mode))
+```
+
+## Metropolis-within-Gibbs (`MWG`)
+
+**Description.**  Each parameter (or block) is updated in turn with a
+univariate Metropolis–Hastings step, conditional on all other
+parameters.  The proposal variance for each component is tuned
+adaptively to reach a target acceptance rate of approximately 44%.
+This is the default algorithm in **LaplacesDemon**.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `B`  | Optional list of blocks.  If `NULL`, each parameter is its own block. |
+
+**When to use.**  Very robust; works well even with correlated
+parameters because it updates one dimension at a time.  May be slow for
+strongly correlated, high-dimensional posteriors because it cannot
+exploit inter-parameter correlations within a single proposal.
+
+```{r mwg}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "MWG",
+  Specs     = list(B = NULL))
+```
+
+## Adaptive Metropolis-within-Gibbs (`AMWG`)
+
+**Description.**  Extends MWG with componentwise adaptation of the
+log-scale proposal standard deviations following Roberts and Rosenthal
+(2009).  Every `Periodicity` iterations the log-scale step is
+incremented or decremented to push each component's acceptance rate
+towards 44%.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `B`           | Optional blocks. |
+| `n`           | Number of previous iterations (for continuing a run). |
+| `Periodicity` | How often to adapt (iterations). |
+
+```{r amwg}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "AMWG",
+  Specs     = list(B = NULL, n = 0, Periodicity = 50))
+```
+
+## Adaptive Metropolis (`AM`)
+
+**Description.**  The Adaptive Metropolis algorithm of Haario, Saksman
+and Tamminen (2001) learns a full multivariate Gaussian proposal
+covariance from the history of the chain.  After a burn-in of
+`Adaptive` iterations the proposal covariance is updated every
+`Periodicity` iterations:
+
+$$
+\Sigma_t = s_d \left[\operatorname{Cov}(\theta^{(0)},\ldots,\theta^{(t-1)}) + \varepsilon I_d\right],
+$$
+
+where $s_d = 2.38^2/d$ is the theoretically optimal scaling for a
+Gaussian target (Gelman et al. 1996).
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `Adaptive`    | Iteration at which adaptation begins. |
+| `Periodicity` | Adaptation frequency in iterations. |
+
+```{r am}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "AM",
+  Specs     = list(Adaptive = 500, Periodicity = 10))
+```
+
+## Adaptive-Mixture Metropolis (`AMM`)
+
+**Description.**  A mixture of an adaptive multivariate proposal
+(similar to AM) and a static componentwise proposal.  Each iteration,
+the componentwise proposal is used with probability $w$ and the
+adaptive multivariate proposal with probability $1-w$.  This helps
+maintain ergodicity while benefiting from adaptation
+(Roberts & Rosenthal 2009).
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `Adaptive`    | Iteration at which adaptation begins. |
+| `B`           | Optional blocks for the componentwise component. |
+| `n`           | Previous iterations for continuing a run. |
+| `Periodicity` | Adaptation frequency. |
+| `w`           | Mixture weight for componentwise proposals (recommended: 0.05). |
+
+```{r amm}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "AMM",
+  Specs     = list(Adaptive = 500, B = NULL, n = 0,
+                   Periodicity = 10, w = 0.05))
+```
+
+## Delayed Rejection Metropolis (`DRM`)
+
+**Description.**  When a proposal is rejected, a second-stage proposal
+of smaller scale is attempted before the chain remains at the current
+state.  This reduces the probability of long sequences of rejections
+without violating detailed balance (Mira 2001).
+
+**Specs.**  None beyond the standard `B` block list.
+
+```{r drm}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "DRM",
+  Specs     = list(B = NULL))
+```
+
+## Delayed Rejection Adaptive Metropolis (`DRAM`)
+
+**Description.**  Combines delayed rejection (DRM) with the adaptive
+multivariate proposal of AM.  After `Adaptive` iterations the proposal
+covariance is updated every `Periodicity` iterations, and rejected
+proposals trigger a second, smaller attempt (Haario et al. 2006).
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `Adaptive`    | Start of adaptation. |
+| `Periodicity` | Adaptation frequency. |
+
+```{r dram}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "DRAM",
+  Specs     = list(Adaptive = 500, Periodicity = 10))
+```
+
+## Robust Adaptive Metropolis (`RAM`)
+
+**Description.**  Vihola's (2011) RAM algorithm adapts the proposal
+Cholesky factor $S$ so that the mean acceptance rate converges to a
+target $\alpha^*$.  The adaptation rule is:
+
+$$
+S_{t+1} S_{t+1}^T = S_t \!\left(I + \eta_t
+  (\alpha_t - \alpha^*) \frac{u_t u_t^T}{\|u_t\|^2}\right) S_t^T,
+$$
+
+where $u_t = \theta' - \theta^{(t)}$ and $\eta_t = \min(1, d\,t^{-\gamma})$.
+RAM is guaranteed to converge under mild conditions.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `alpha.star` | Target acceptance rate (recommended 0.234 for multivariate). |
+| `B`          | Optional blocks. |
+| `Dist`       | Proposal distribution: `"N"` (normal) or `"t"`. |
+| `gamma`      | Decay rate of adaptation, in $(0.5, 1]$ (recommended 0.66). |
+| `n`          | Previous iterations. |
+
+```{r ram}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "RAM",
+  Specs     = list(alpha.star = 0.234, B = NULL,
+                   Dist = "N", gamma = 0.66, n = 0))
+```
+
+## Multiple-Try Metropolis (`MTM`)
+
+**Description.**  Instead of a single proposal, $K$ candidate points
+are drawn from the proposal distribution.  One candidate $\theta'$ is
+selected with probability proportional to $\pi(\theta')\,w(\theta',\theta)$,
+and accepted via a modified MH ratio that maintains detailed balance
+(Liu et al. 2000).  For a fixed computational budget it can achieve better
+mixing than standard MH.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `K` | Number of proposals per iteration (integer ≥ 1). |
+
+```{r mtm}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "MTM",
+  Specs     = list(K = 4))
+```
+
+## Random Dive Metropolis-Hastings (`RDMH`)
+
+**Description.**  A multiplicative random-walk sampler on $\mathbb{R}$,
+proposed by Dutta (2012).  The proposal is
+$\theta'_j = \theta_j \cdot \exp(\epsilon_j)$, $\epsilon_j \sim
+\mathcal{N}(0, \sigma^2)$.  This makes it scale-free and avoids the
+sign problem of additive proposals when parameters are constrained to be
+positive.
+
+**Specs.**  None (standard `B` block argument).
+
+```{r rdmh}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "RDMH",
+  Specs     = list(B = NULL))
+```
+
+---
+
+# Componentwise and Hit-and-Run Samplers
+
+These algorithms move in one direction at a time but vary *which*
+direction is chosen at each step.
+
+## Componentwise Hit-And-Run Metropolis (`CHARM`)
+
+**Description.**  The default algorithm used by **Highlander** when
+calling `LaplacesDemon()`.  At each iteration a random direction $v$ is
+drawn uniformly from the unit sphere and a step of size $\sigma$ is
+proposed along $v$:
+
+$$
+\theta' = \theta^{(t)} + \sigma v.
+$$
+
+Unlike standard MWG, CHARM mixes coordinate directions, which can aid
+mixing when parameters are correlated.  When `alpha.star` is provided,
+the scale $\sigma$ is tuned to approach that acceptance rate.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `alpha.star` | Optional target acceptance rate (recommended 0.44 for componentwise). |
+| `B`          | Optional blocks. |
+
+```{r charm}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "CHARM",
+  Specs     = list(alpha.star = NULL, B = NULL))
+```
+
+## Hit-And-Run Metropolis (`HARM`)
+
+**Description.**  Similar to CHARM but the direction is drawn from a
+fixed (non-adapting) distribution.  Smith (1984) originally proposed
+hit-and-run for uniform sampling over convex sets; the HARM variant
+adapts it to general log-concave targets using Gaussian proposals along
+the chosen direction.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `alpha.star` | Optional target acceptance rate. |
+| `B`          | Optional blocks. |
+
+```{r harm}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "HARM",
+  Specs     = list(alpha.star = NULL, B = NULL))
+```
+
+## Adaptive Directional Metropolis-within-Gibbs (`ADMG`)
+
+**Description.**  Bai (2009) proposed updating each parameter along an
+adaptively-chosen direction within the Gibbs framework.  The direction
+for each component is adapted using past samples to align with the local
+curvature of the posterior, reducing the correlations that slow
+componentwise MH.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `n` | Number of previous iterations (for continuing a run). |
+
+```{r admg}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "ADMG",
+  Specs     = list(n = 0))
+```
+
+---
+
+# Gibbs Samplers
+
+Gibbs sampling draws each parameter (or block) exactly from its full
+conditional distribution $\pi(\theta_j \mid \theta_{-j}, y)$.  When
+full conditionals are available in closed form, Gibbs is highly
+efficient.
+
+## Gibbs Sampler (`Gibbs`)
+
+**Description.**  The user supplies a function `FC` that computes and
+returns updated parameters from their full conditionals.  This is the
+exact Gibbs sampler of Geman and Geman (1984); no Metropolis–Hastings
+correction is needed because samples are drawn exactly.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `FC`  | A function taking `(parm, Data)` and returning an updated parameter vector. |
+| `MWG` | Integer vector of parameter indices to receive MWG updates instead of exact Gibbs updates. |
+
+```{r gibbs}
+FC <- function(parm, Data) {
+  # draw each parameter from its full conditional
+  parm[1] <- rnorm(1, ...)
+  return(parm)
+}
+
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "Gibbs",
+  Specs     = list(FC = FC, MWG = NULL))
+```
+
+## Griddy-Gibbs (`GG`)
+
+**Description.**  When full conditionals are not available analytically,
+Ritter and Tanner (1992) proposed evaluating the unnormalised
+conditional on a user-defined grid and drawing via inverse CDF.  This
+is exact up to the grid resolution and avoids Metropolis correction.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `dparm` | Vector of indices of discrete parameters. |
+| `Grid`  | A vector (or list of vectors) of evenly-spaced grid points. |
+
+```{r gg}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "GG",
+  Specs     = list(dparm = NULL, Grid = seq(-0.1, 0.1, length.out = 5)))
+```
+
+## Adaptive Griddy-Gibbs (`AGG`)
+
+**Description.**  Extends GG by adapting the grid width using the
+running variance of each parameter.  This removes the burden of
+hand-tuning the grid while preserving the exact-Gibbs character of the
+sampler.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `dparm` | Discrete parameter indices. |
+| `Grid`  | Initial grid (adapted subsequently). |
+| `smax`  | Maximum allowable grid width (standard deviation). |
+
+```{r agg}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "AGG",
+  Specs     = list(dparm = NULL,
+                   Grid  = seq(-0.1, 0.1, length.out = 5),
+                   smax  = Inf))
+```
+
+---
+
+# Ensemble and Population-Based Samplers
+
+These methods maintain multiple "walkers" or "chains" simultaneously,
+allowing inter-chain proposals that exploit the current distribution of
+the ensemble.
+
+## Affine-Invariant Ensemble Sampler (`AIES`)
+
+**Description.**  Goodman and Weare's (2010) ensemble sampler maintains
+$N$ walkers $\{\theta^{(k)}\}_{k=1}^N$.  For walker $k$, a complement
+walker $j \ne k$ is selected at random and the proposal is
+
+$$
+\theta' = \theta^{(j)} + Z \left(\theta^{(k)} - \theta^{(j)}\right),
+\quad Z \sim g(z),
+$$
+
+where $g$ is chosen so the sampler is affine-invariant.  The default
+choice gives $Z$ with PDF $g(z) \propto z^{-1/2}$ on $[1/\beta, \beta]$
+with $\beta = 2$.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `beta` | Scale parameter (default 2). |
+
+```{r aies}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "AIES",
+  Specs     = list(beta = 2))
+```
+
+## Differential Evolution Markov Chain (`DEMC`)
+
+**Description.**  DEMC (Ter Braak & Vrugt 2008) runs $N_c \ge 3$ chains in
+parallel.  The proposal for chain $i$ uses the difference of two
+randomly-chosen other chains:
+
+$$
+\theta'_i = \theta_i^{(t)} + \gamma (\theta_r^{(t)} - \theta_s^{(t)}) + e,
+\quad e \sim \mathcal{N}(0, \epsilon I),
+$$
+
+where $\gamma = 2.38/\sqrt{2d}$ by default.  A "snooker" update
+(probability $w$) projects along the line connecting the current chain
+to a randomly-chosen history point.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `gamma` | Scale for difference vector (defaults to $2.38/\sqrt{2d}$). |
+| `Nc`    | Number of parallel chains (≥ 3). |
+| `w`     | Probability of snooker update (recommended 0.1). |
+| `Z`     | Optional matrix/array of previous thinned samples. |
+
+```{r demc}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "DEMC",
+  Specs     = list(gamma = NULL, Nc = 3, w = 0.1, Z = NULL))
+```
+
+## Interchain Adaptation (`INCA`)
+
+**Description.**  Craiu, Rosenthal and Yang (2009) proposed INCA, which
+uses parallel chains to adapt a shared proposal covariance.  Regional
+information from nearby chains is combined to improve the proposal for
+each chain, yielding faster mixing than independent AM chains.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `Adaptive`    | Start of adaptation. |
+| `Periodicity` | Adaptation frequency. |
+
+```{r inca}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "INCA",
+  Specs     = list(Adaptive = 500, Periodicity = 10))
+```
+
+## Metropolis-Coupled MCMC (`MCMCMC`)
+
+**Description.**  Geyer's (1991) parallel tempering runs $T$ chains at
+different temperatures $\{1/\lambda_t\}$.  The cold chain ($t=1$)
+targets $\pi(\theta)$; hotter chains explore more freely.  Periodically,
+adjacent chains attempt a swap:
+
+$$
+\alpha_{\text{swap}} = \min\!\left(1,\;
+  \frac{\pi(\theta_t)^{1/\lambda_{t+1}} \pi(\theta_{t+1})^{1/\lambda_t}}
+       {\pi(\theta_t)^{1/\lambda_t}   \pi(\theta_{t+1})^{1/\lambda_{t+1}}}
+\right).
+$$
+
+This helps the cold chain escape local modes.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `lambda` | Temperature spacing scalar or vector. |
+
+```{r mcmcmc}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "MCMCMC",
+  Specs     = list(lambda = 1))
+```
+
+---
+
+# Hamiltonian / Langevin Algorithms
+
+Hamiltonian Monte Carlo (HMC) (Duane et al. 1987; Neal 2011) augments $\theta$
+with an auxiliary momentum $p \sim \mathcal{N}(0, M)$ and simulates
+Hamiltonian dynamics
+
+$$
+\frac{d\theta}{dt} = \frac{\partial K}{\partial p},
+\qquad
+\frac{dp}{dt} = -\frac{\partial U}{\partial \theta},
+$$
+
+using the leapfrog integrator.  Proposals obtained by integrating for
+$L$ steps of size $\epsilon$ are accepted/rejected by the energy
+$H(\theta, p) = U(\theta) + K(p)$.  Because dynamics preserve volume
+and (approximately) energy, acceptance rates are high and proposals are
+far from the starting point.
+
+## Hamiltonian Monte Carlo (`HMC`)
+
+**Description.**  The classic HMC sampler.  Gradient
+$\nabla_\theta \log\pi(\theta)$ must be evaluated at each leapfrog
+step, making it expensive per iteration but typically much more
+efficient per independent sample than gradient-free methods.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `epsilon` | Leapfrog step size vector (length $d$). |
+| `L`       | Number of leapfrog steps per iteration. |
+| `m`       | Mass matrix ($d \times d$). |
+
+```{r hmc}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "HMC",
+  Specs     = list(epsilon = 0.1, L = 20, m = NULL))
+```
+
+## Adaptive Hamiltonian Monte Carlo (`AHMC`)
+
+**Description.**  Adapts the mass matrix and step sizes from the running
+covariance of the chain, removing the need to hand-tune these HMC
+parameters.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `epsilon`     | Initial step-size vector. |
+| `L`           | Leapfrog steps. |
+| `m`           | Initial mass matrix. |
+| `Periodicity` | Adaptation frequency. |
+
+```{r ahmc}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "AHMC",
+  Specs     = list(epsilon = 0.1, L = 20, m = NULL, Periodicity = 10))
+```
+
+## Hamiltonian Monte Carlo with Dual-Averaging (`HMCDA`)
+
+**Description.**  Hoffman and Gelman's (2014) HMCDA uses Nesterov's
+dual-averaging scheme to automatically tune the step size $\epsilon$ to
+achieve a target acceptance rate $\delta$ (typically 0.65), and adapts
+the trajectory length $\lambda = L\epsilon$ to a fixed user-supplied
+target.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `delta`   | Target acceptance rate (recommended 0.65). |
+| `epsilon` | Initial step size (or `NULL` for automatic initialisation). |
+| `lambda`  | Target trajectory length. |
+| `Lmax`    | Maximum leapfrog steps. |
+
+```{r hmcda}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "HMCDA",
+  Specs     = list(delta = 0.65, epsilon = NULL,
+                   lambda = 0.1, Lmax = 1000))
+```
+
+## No-U-Turn Sampler (`NUTS`)
+
+**Description.**  NUTS (Hoffman & Gelman 2014) eliminates the need to choose $L$
+by automatically stopping the leapfrog trajectory when it would start to
+backtrack ("make a U-turn").  Combined with dual-averaging for $\epsilon$,
+NUTS is nearly parameter-free and often outperforms hand-tuned HMC.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `A`       | Number of adaptive burn-in iterations to discard. |
+| `delta`   | Target acceptance rate (recommended 0.6). |
+| `epsilon` | Initial step size (or `NULL`). |
+| `Lmax`    | Maximum tree depth (maximum leapfrog steps = $2^{\text{Lmax}}$). |
+
+```{r nuts}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "NUTS",
+  Specs     = list(A = 500, delta = 0.6,
+                   epsilon = NULL, Lmax = 1000))
+```
+
+## Tempered Hamiltonian Monte Carlo (`THMC`)
+
+**Description.**  A variant of HMC that heats the momentum in the first
+half of the leapfrog trajectory and cools it in the second half,
+controlled by a `Temperature` parameter.  Higher temperatures encourage
+exploration of multimodal posteriors.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `epsilon`     | Leapfrog step-size vector. |
+| `L`           | Leapfrog steps. |
+| `m`           | Mass matrix. |
+| `Temperature` | Tempering value (> 1 increases exploration). |
+
+```{r thmc}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "THMC",
+  Specs     = list(epsilon = 0.1, L = 20, m = NULL, Temperature = 1))
+```
+
+## Metropolis-Adjusted Langevin Algorithm (`MALA`)
+
+**Description.**  MALA uses a single gradient-guided Langevin step
+
+$$
+\theta' = \theta^{(t)}
+  + \frac{\epsilon^2}{2} \nabla\log\pi(\theta^{(t)}) + \epsilon\,\xi,
+\quad \xi \sim \mathcal{N}(0, I),
+$$
+
+followed by an MH correction.  Atchadé (2006) proposed an adaptive
+truncated version that clips the drift to prevent divergence.  The
+optimal acceptance rate for MALA is approximately 57.4%.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `A`          | Maximum acceptable norm for adaptive parameters. |
+| `alpha.star` | Target acceptance rate (recommended 0.574). |
+| `delta`      | Constant in the bounded drift (default 1; range $[10^{-10}, 1000]$). |
+| `epsilon`    | Length-2 vector: (min adaptive scale, regularisation). |
+| `gamma`      | In $(1, \text{Iterations})$; controls adaptation decay (default 1). |
+
+```{r mala}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "MALA",
+  Specs     = list(A = Inf, alpha.star = 0.574,
+                   delta = 1, epsilon = c(1e-6, 1e-7),
+                   gamma = 1))
+```
+
+## Stochastic Gradient Langevin Dynamics (`SGLD`)
+
+**Description.**  Welling and Teh (2011) proposed SGLD for big-data
+settings.  At each iteration, a random minibatch of `size` rows is
+drawn from a large dataset stored on disk, and a noisy gradient is used
+in a Langevin step with step size $\epsilon_t$.  No MH correction is
+needed when $\epsilon_t \to 0$.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `epsilon` | Step-size scalar or vector of length `Iterations`. |
+| `file`    | Path to a `.csv` file of the full data. |
+| `Nc`      | Number of columns in the data file. |
+| `Nr`      | Number of rows in the data file. |
+| `size`    | Minibatch size (rows per iteration). |
+
+```{r sgld}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "SGLD",
+  Specs     = list(epsilon = 1e-4, file = "bigdata.csv",
+                   Nc = 10, Nr = 1e6, size = 200))
+```
+
+## Preconditioned Crank-Nicolson (`pCN`)
+
+**Description.**  Beskos et al. (2008) introduced pCN for
+infinite-dimensional targets.  The proposal is
+
+$$
+\theta' = \sqrt{1-\beta^2}\,\theta^{(t)} + \beta\,\xi,
+\quad \xi \sim \mathcal{N}(0, C),
+$$
+
+where $C$ is a prior covariance.  pCN is dimension-robust: its
+acceptance rate does not degrade as dimension increases, making it
+suitable for large hierarchical models.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `beta` | Autoregressive parameter, $\beta \in (0,1)$. |
+
+```{r pcn}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "pCN",
+  Specs     = list(beta = 0.1))
+```
+
+---
+
+# Slice Samplers
+
+Slice sampling (Neal 2003) avoids explicit proposals entirely by
+sampling uniformly from the "slice" $\{(\theta, y): y \le \pi(\theta)\}$,
+which is equivalent to sampling from $\pi$.  Various schemes differ in
+how the slice interval is constructed.
+
+## Slice Sampler (`Slice`)
+
+**Description.**  Neal's (2003) general univariate (or blockwise) slice
+sampler uses "stepping out" and "shrinkage" to find the slice.  For
+each parameter (or block) an interval of width $w$ is grown until it
+brackets the slice, then a point is drawn uniformly from the interval
+and shrunk if necessary.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `B`      | Optional blocks. |
+| `Bounds` | Lower and upper bounds for the slice (vector or list). |
+| `m`      | Maximum steps for growing the interval (integer ≥ 1). |
+| `Type`   | `"Continuous"`, `"Nominal"`, or `"Ordinal"`. |
+| `w`      | Initial interval width (scalar or list per block). |
+
+```{r slice}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "Slice",
+  Specs     = list(B = NULL,
+                   Bounds = c(-Inf, Inf),
+                   m = 100,
+                   Type = "Continuous",
+                   w = 1))
+```
+
+## Automated Factor Slice Sampler (`AFSS`)
+
+**Description.**  Tibbits et al. (2014) proposed AFSS, which adapts an
+orthogonal factor structure of the parameter space to align the slice
+with the principal axes of the posterior.  This greatly reduces the
+number of steps needed to create the slice in correlated,
+high-dimensional problems.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `A` | Adaptive burn-in iterations to discard. |
+| `B` | Optional blocks. |
+| `m` | Maximum steps for growing slice interval. |
+| `n` | Previous iterations. |
+| `w` | Initial interval width. |
+
+```{r afss}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "AFSS",
+  Specs     = list(A = Inf, B = NULL, m = 100, n = 0, w = 1))
+```
+
+## Univariate Eigenvector Slice Sampler (`UESS`)
+
+**Description.**  Thompson (2011) proposed slicing along the eigenvectors
+of the empirical covariance matrix of the chain.  Moving along
+decorrelated directions yields a slice interval that is better aligned
+with the posterior geometry.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `A` | Adaptive burn-in to discard. |
+| `B` | Optional blocks. |
+| `m` | Maximum steps. |
+| `n` | Previous iterations. |
+| `w` | Initial interval width. |
+
+```{r uess}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "UESS",
+  Specs     = list(A = Inf, B = NULL, m = 100, n = 0, w = 1))
+```
+
+## Reflective Slice Sampler (`RSS`)
+
+**Description.**  An extension of the slice sampler that reflects the
+proposal off the boundary of the slice rather than shrinking, following
+the trajectory of a billiard ball.  This can give better mixing in
+elongated or curved posteriors.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `m` | Steps per iteration. |
+| `w` | Step size (scalar or parameter-length vector). |
+
+```{r rss}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "RSS",
+  Specs     = list(m = 1, w = 1))
+```
+
+## Oblique Hyperrectangle Slice Sampler (`OHSS`)
+
+**Description.**  Generalises the hyperrectangle slice sampler to oblique
+(rotated) hyperrectangles, allowing better coverage of posteriors with
+axis-aligned correlations.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `A` | Adaptive burn-in. |
+| `n` | Previous iterations. |
+| `w` | Interval width. |
+
+```{r ohss}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "OHSS",
+  Specs     = list(A = Inf, n = 0, w = 1))
+```
+
+## Elliptical Slice Sampler (`ESS`)
+
+**Description.**  Murray, Adams and MacKay (2010) proposed ESS for
+models with a Gaussian prior.  A "ellipse" of proposals is defined
+using the current state and a Gaussian draw; the algorithm searches the
+ellipse for a point that satisfies the likelihood slice condition.  No
+tuning is required.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `B` | Optional blocks. |
+
+```{r ess}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "ESS",
+  Specs     = list(B = NULL))
+```
+
+---
+
+# Miscellaneous and Specialised Algorithms
+
+## t-walk (`twalk`)
+
+**Description.**  Christen and Fox (2010) proposed the t-walk, a
+self-contained, essentially tuning-free sampler that maintains two
+points $\theta$ and $\phi$ and proposes moves using a random mixture of
+four "kernels": walk, traverse, blow, and hop.  The traverse kernel
+generates proposals along the line connecting the two points and is
+particularly effective for correlated posteriors.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `at` | Traverse move scale (recommended 6; range [2, 10]). |
+| `aw` | Walk move scale (recommended 1.5; range [0.3, 2]). |
+| `n1` | Subset size for traverse move (recommended 4; range [2, 20]). |
+| `SIV` | Secondary initial values (must differ element-wise from `Initial.Values`). |
+
+```{r twalk}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "twalk",
+  Specs     = list(at = 6, aw = 1.5, n1 = 4, SIV = NULL))
+```
+
+## Refractive Sampler (`Refractive`)
+
+**Description.**  Boyles and Welling (2012) proposed a sampler inspired
+by Snell's law of refraction.  A particle crosses the boundary of a
+"lens" defined by the current log-posterior value and refracts
+according to the ratio of densities on either side.  This creates
+proposals that preferentially explore high-density regions.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `Adaptive`    | Start of adaptation. |
+| `m`           | Steps per iteration. |
+| `Periodicity` | Adaptation frequency. |
+| `r`           | Refractive index ratio $r_1/r_2$. |
+| `w`           | Step size. |
+
+```{r refractive}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "Refractive",
+  Specs     = list(Adaptive = 500, m = 1,
+                   Periodicity = 10, r = 1.3, w = 0.5))
+```
+
+## Reversible-Jump (`RJ`)
+
+**Description.**  Green's (1995) reversible-jump MCMC allows the
+dimension of the parameter space to change between iterations, enabling
+joint inference over model selection and parameters.  At each iteration
+a parameter is either added to or removed from the active set, with a
+binomial prior on model size.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `bin.n`      | Binomial prior size $n$. |
+| `bin.p`      | Binomial prior probability $p$. |
+| `parm.p`     | Selection probabilities for each parameter (length $d$ vector). |
+| `selectable` | Binary vector: 1 = can be selected, 0 = always included. |
+| `selected`   | Binary vector indicating initial selection state. |
+
+```{r rj}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "RJ",
+  Specs     = list(bin.n = d, bin.p = 0.5,
+                   parm.p   = rep(0.5, d),
+                   selectable = rep(1, d),
+                   selected   = rep(1, d)))
+```
+
+---
+
+# Sequential / Updating Algorithms
+
+These algorithms are designed for online updating as new data arrive,
+using dynamic state-space models.  Non-dynamic parameters are updated
+first, then dynamic parameters are updated sequentially through
+time-periods.
+
+## Sequential Metropolis-within-Gibbs (`SMWG`)
+
+**Description.**  Applies MWG updates to dynamic state parameters in
+a sequential state-space model.  The `Dyn` matrix specifies dynamic
+parameter values for each of $T$ time-periods.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `Dyn` | $T \times K_{\text{dyn}}$ matrix of dynamic parameter values. |
+
+```{r smwg}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "SMWG",
+  Specs     = list(Dyn = Dyn_matrix))
+```
+
+## Sequential Adaptive Metropolis-within-Gibbs (`SAMWG`)
+
+**Description.**  Extends SMWG with componentwise adaptive proposals for
+dynamic parameters.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `Dyn`         | Dynamic parameter matrix. |
+| `Periodicity` | Adaptation frequency. |
+
+```{r samwg}
+Fit <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "SAMWG",
+  Specs     = list(Dyn = Dyn_matrix, Periodicity = 50))
+```
+
+## Updating Sequential Metropolis-within-Gibbs (`USMWG`)
+
+**Description.**  An *updating* variant of SMWG intended for online
+inference.  Past samples stored in a `Fit` object are retained; only
+the time-periods from `Begin` onwards are re-sampled.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `Begin` | Time-period from which to begin updating. |
+| `Dyn`   | Dynamic parameter matrix. |
+| `Fit`   | Previous `demonoid` fit object. |
+
+```{r usmwg}
+Fit_update <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "USMWG",
+  Specs     = list(Begin = T_new, Dyn = Dyn_matrix, Fit = Fit_old))
+```
+
+## Updating Sequential Adaptive Metropolis-within-Gibbs (`USAMWG`)
+
+**Description.**  Combines the adaptive proposals of SAMWG with the
+online updating capability of USMWG.
+
+**Specs.**
+
+| Spec | Description |
+|------|-------------|
+| `Begin`       | Start time-period for updating. |
+| `Dyn`         | Dynamic parameter matrix. |
+| `Fit`         | Previous `demonoid` fit. |
+| `Periodicity` | Adaptation frequency. |
+
+```{r usamwg}
+Fit_update <- LaplacesDemon(Model, MyData, iv,
+  Algorithm = "USAMWG",
+  Specs     = list(Begin = T_new, Dyn = Dyn_matrix,
+                   Fit = Fit_old, Periodicity = 50))
+```
+
+---
+
+# Summary Table
+
+The table below provides a quick reference for all available algorithms.
+"Gradient?" indicates whether the log-posterior gradient is needed.
+"Adaptive?" indicates built-in adaptation of the proposal.  "Parallel?"
+indicates whether the algorithm natively uses multiple chains.
+
+| Algorithm | Full name | Gradient? | Adaptive? | Parallel? |
+|-----------|-----------|:---------:|:---------:|:---------:|
+| `ADMG`    | Adaptive Directional MWG | No | Yes | No |
+| `AGG`     | Adaptive Griddy-Gibbs | No | Yes | No |
+| `AHMC`    | Adaptive HMC | Yes | Yes | No |
+| `AIES`    | Affine-Invariant Ensemble Sampler | No | No | Yes |
+| `AFSS`    | Automated Factor Slice Sampler | No | Yes | No |
+| `AM`      | Adaptive Metropolis | No | Yes | No |
+| `AMM`     | Adaptive-Mixture Metropolis | No | Yes | No |
+| `AMWG`    | Adaptive MWG | No | Yes | No |
+| `CHARM`   | Componentwise Hit-And-Run MH | No | Optional | No |
+| `DEMC`    | Differential Evolution MC | No | No | Yes |
+| `DRAM`    | Delayed Rejection AM | No | Yes | No |
+| `DRM`     | Delayed Rejection MH | No | No | No |
+| `ESS`     | Elliptical Slice Sampler | No | No | No |
+| `GG`      | Griddy-Gibbs | No | No | No |
+| `Gibbs`   | Gibbs Sampler | No | No | No |
+| `HARM`    | Hit-And-Run MH | No | Optional | No |
+| `HMC`     | Hamiltonian MC | Yes | No | No |
+| `HMCDA`   | HMC with Dual-Averaging | Yes | Yes | No |
+| `IM`      | Independence Metropolis | No | No | No |
+| `INCA`    | Interchain Adaptation | No | Yes | Yes |
+| `MALA`    | Metropolis-Adjusted Langevin | Yes | Yes | No |
+| `MCMCMC`  | Metropolis-Coupled MC^3 | No | No | Yes |
+| `MTM`     | Multiple-Try MH | No | No | No |
+| `MWG`     | Metropolis-within-Gibbs | No | No | No |
+| `NUTS`    | No-U-Turn Sampler | Yes | Yes | No |
+| `OHSS`    | Oblique Hyperrectangle Slice | No | Yes | No |
+| `pCN`     | Preconditioned Crank-Nicolson | No | No | No |
+| `RAM`     | Robust Adaptive Metropolis | No | Yes | No |
+| `RDMH`    | Random Dive MH | No | No | No |
+| `Refractive` | Refractive Sampler | No | Yes | No |
+| `RJ`      | Reversible-Jump | No | No | No |
+| `RSS`     | Reflective Slice Sampler | No | No | No |
+| `RWM`     | Random-Walk Metropolis | No | No | No |
+| `SAMWG`   | Sequential Adaptive MWG | No | Yes | No |
+| `SGLD`    | Stochastic Gradient Langevin | Yes | No | No |
+| `Slice`   | Slice Sampler | No | No | No |
+| `SMWG`    | Sequential MWG | No | No | No |
+| `THMC`    | Tempered HMC | Yes | No | No |
+| `twalk`   | t-walk | No | No | No |
+| `UESS`    | Univariate Eigenvector Slice | No | Yes | No |
+| `USAMWG`  | Updating Sequential Adaptive MWG | No | Yes | No |
+| `USMWG`   | Updating Sequential MWG | No | No | No |
+
+---
+
+# Choosing an Algorithm
+
+## No gradient available
+
+- **Low dimension** ($d \lesssim 20$): `MWG`, `AMWG`, `CHARM`,
+  `HARM` — simple, robust, easy to tune.
+- **Moderate dimension** ($d \sim 20$–$100$): `AM`, `AMM`, `DRAM`,
+  `RAM` — learn the proposal covariance adaptively.
+- **Correlated parameters**: `AMM`, `DEMC`, `AIES`, `twalk` — use
+  inter-chain information or direction-aware proposals.
+- **Multimodal posterior**: `MCMCMC`, `THMC`, `DEMC` — tempering or
+  parallel chains help escape local modes.
+- **Discrete parameters**: `GG`, `AGG`, `Slice` — exact or grid-based
+  sampling.
+- **Variable selection**: `RJ` — reversible-jump for trans-dimensional
+  moves.
+- **Big data**: `SGLD` — stochastic gradients on minibatches.
+- **Online updating / state-space models**: `SMWG`, `SAMWG`, `USMWG`,
+  `USAMWG`.
+
+## Gradient available
+
+- **General purpose**: `NUTS` — nearly tuning-free, state-of-the-art
+  gradient-based sampler.
+- **Fixed hyperparameters**: `HMC` — highly efficient when $\epsilon$
+  and $L$ are well tuned.
+- **Big data**: `SGLD` — gradient estimated on minibatch.
+- **Multimodal**: `THMC` — tempered momentum for better exploration.
+- **Infinite-dimensional / functional**: `pCN` — dimension-robust.
+- **Gaussian likelihood / prior**: `ESS` — requires no tuning.
+
+## The default: `CHARM`
+
+**Highlander** sets `CHARM` as its default `LaplacesDemon` algorithm
+because it offers a good
+balance of generality, robustness, and ease of use.  It requires no
+gradient, adapts its scale automatically, and handles correlated
+parameters better than standard `MWG` by mixing directions.  For most
+problems it is a sensible starting point before switching to a more
+specialised algorithm if needed.
+
+---
+
+# References
+
+Atchadé, Y.F. (2006). "An Adaptive Version for the Metropolis Adjusted
+Langevin Algorithm with a Truncated Drift". *Methodology and Computing in
+Applied Probability*, 8, 235–254.
+
+Bai, Y. (2009). "An Adaptive Directional Metropolis-within-Gibbs
+Algorithm". Technical Report, University of Toronto.
+
+Beskos, A., Roberts, G.O., Stuart, A.M., and Voss, J. (2008). "MCMC
+Methods for Diffusion Bridges". *Stoch. Dyn.*, 8, 319–350.
+
+Boyles, L.B. and Welling, M. (2012). "Refractive Sampling".
+
+Christen, J.A. and Fox, C. (2010). "A General Purpose Sampling Algorithm
+for Continuous Distributions (the t-walk)". *Bayesian Analysis*, 5(2),
+263–282.
+
+Craiu, R.V., Rosenthal, J., and Yang, C. (2009). "Learn From Thy
+Neighbor: Parallel-Chain and Regional Adaptive MCMC". *Journal of the
+American Statistical Association*, 104(488), 1454–1466.
+
+Duane, S., Kennedy, A.D., Pendleton, B.J., and Roweth, D. (1987). "Hybrid
+Monte Carlo". *Physics Letters B*, 195, 216–222.
+
+Dutta, S. (2012). "Multiplicative Random Walk Metropolis-Hastings on the
+Real Line". *Sankhya B*, 74(2), 315–342.
+
+Gelman, A., Roberts, G.O., and Gilks, W.R. (1996). "Efficient Metropolis
+Jumping Rules". *Bayesian Statistics*, 5, 599–607.
+
+Geman, S. and Geman, D. (1984). "Stochastic Relaxation, Gibbs
+Distributions, and the Bayesian Restoration of Images". *IEEE Transactions
+on Pattern Analysis and Machine Intelligence*, 6(6), 721–741.
+
+Geyer, C.J. (1991). "Markov Chain Monte Carlo Maximum Likelihood".
+*Proceedings of the 23rd Symposium of the Interface*. Interface
+Foundation. 156–163.
+
+Goodman, J. and Weare, J. (2010). "Ensemble Samplers with Affine
+Invariance". *Communications in Applied Mathematics and Computational
+Science*, 5(1), 65–80.
+
+Green, P.J. (1995). "Reversible Jump Markov Chain Monte Carlo Computation
+and Bayesian Model Determination". *Biometrika*, 82, 711–732.
+
+Haario, H., Laine, M., Mira, A., and Saksman, E. (2006). "DRAM: Efficient
+Adaptive MCMC". *Statistical Computing*, 16, 339–354.
+
+Haario, H., Saksman, E., and Tamminen, J. (2001). "An Adaptive Metropolis
+Algorithm". *Bernoulli*, 7, 223–242.
+
+Hastings, W.K. (1970). "Monte Carlo Sampling Methods Using Markov Chains
+and Their Applications". *Biometrika*, 57(1), 97–109.
+
+Hoffman, M.D. and Gelman, A. (2014). "The No-U-Turn Sampler: Adaptively
+Setting Path Lengths in Hamiltonian Monte Carlo". *Journal of Machine
+Learning Research*, 15, 1593–1623.
+
+Liu, J., Liang, F., and Wong, W. (2000). "The Multiple-Try Method and
+Local Optimization in Metropolis Sampling". *Journal of the American
+Statistical Association*, 95, 121–134.
+
+Metropolis, N., Rosenbluth, A.W., Rosenbluth, M.N., and Teller, E. (1953).
+"Equation of State Calculations by Fast Computing Machines". *Journal of
+Chemical Physics*, 21, 1087–1092.
+
+Mira, A. (2001). "On Metropolis-Hastings Algorithms with Delayed
+Rejection". *Metron*, LIX(3–4), 231–241.
+
+Murray, I., Adams, R.P., and MacKay, D.J. (2010). "Elliptical Slice
+Sampling". *Journal of Machine Learning Research*, 9, 541–548.
+
+Neal, R.M. (2003). "Slice Sampling" (with discussion). *Annals of
+Statistics*, 31(3), 705–767.
+
+Neal, R.M. (2011). "MCMC Using Hamiltonian Dynamics". In Brooks, S.,
+Gelman, A., Jones, G.L., and Meng, X.-L. (eds.), *Handbook of Markov
+Chain Monte Carlo*. Chapman & Hall / CRC Press. Chapter 5.
+
+Ritter, C. and Tanner, M. (1992). "Facilitating the Gibbs Sampler: the
+Gibbs Stopper and the Griddy-Gibbs Sampler". *Journal of the American
+Statistical Association*, 87, 861–868.
+
+Roberts, G.O. and Rosenthal, J.S. (2009). "Examples of Adaptive MCMC".
+*Computational Statistics and Data Analysis*, 18, 349–367.
+
+Roberts, G.O. and Tweedie, R.L. (1996). "Exponential Convergence of
+Langevin Distributions and Their Discrete Approximations". *Bernoulli*,
+2(4), 341–363.
+
+Smith, R.L. (1984). "Efficient Monte Carlo Procedures for Generating
+Points Uniformly Distributed Over Bounded Region". *Operations Research*,
+32, 1296–1308.
+
+Ter Braak, C.J.F. and Vrugt, J.A. (2008). "Differential Evolution Markov
+Chain with Snooker Updater and Fewer Chains". *Statistics and Computing*,
+18(4), 435–446.
+
+Thompson, M.D. (2011). "Slice Sampling with Multivariate Steps".
+<https://utoronto.scholaris.ca/items/161206c5-af25-41a8-99d8-8d622f950cb3>
+
+Tibbits, M., Groendyke, C., Haran, M., and Liechty, J. (2014).
+"Automated Factor Slice Sampling". *Journal of Computational and Graphical
+Statistics*, 23(2), 543–563.
+
+Vihola, M. (2011). "Robust Adaptive Metropolis Algorithm with Coerced
+Acceptance Rate". *Statistics and Computing*. Springer, Netherlands.
+
+Welling, M. and Teh, Y.W. (2011). "Bayesian Learning via Stochastic
+Gradient Langevin Dynamics". *Proceedings of the 28th International
+Conference on Machine Learning (ICML)*, 681–688.
