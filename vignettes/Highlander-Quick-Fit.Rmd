@@ -149,3 +149,32 @@ plot(check_out$SEDout)
 plotSFH(inpar)
 lines(check_out$SEDout$Stars$agevec, check_out$SEDout$Stars$SFR, col='red')
 ```
+
+## Multi-Core Fitting
+
+`Highlander` supports parallel optimisation via the `cores` argument. Setting `cores > 1` launches that many independent `Highlander` chains simultaneously, each starting from a different random seed (`seed`, `seed+1`, ..., `seed+cores-1`). All chains explore the likelihood surface independently, and the chain that achieves the highest log-posterior (LP) is returned. This is particularly useful for multi-modal problems where a single chain may get trapped in a local optimum.
+
+On Unix-like systems (Linux, macOS) `parallel::mclapply` is used, which forks the current R process with no extra setup. On Windows a PSOCK cluster is used automatically — no changes to your code are needed when moving between platforms.
+
+```{r eval=FALSE}
+# Run 4 independent chains in parallel and keep the best result.
+# On a 4-core machine this takes roughly the same wall time as a single chain.
+High_out_mc = Highlander(badpar, ProSpectSEDlike, Data=Data,
+  lower=Data$intervals$lo, upper=Data$intervals$hi, Niters=c(200,200),
+  cores=4L)
+
+# The returned object is identical in structure to the single-core output.
+# $parm holds the best parameters found across all parallel chains.
+High_out_mc$parm
+High_out_mc$LP
+```
+
+```{r eval=FALSE}
+# Inspect the best-fit SED from the parallel run, exactly as before.
+Data$fit = 'check'
+check_out_mc = ProSpectSEDlike(High_out_mc$parm, Data)
+plot(check_out_mc)
+plot(check_out_mc$SEDout)
+plotSFH(inpar)
+lines(check_out_mc$SEDout$Stars$agevec, check_out_mc$SEDout$Stars$SFR, col='red')
+```
