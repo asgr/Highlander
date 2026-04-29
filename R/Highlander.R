@@ -3,7 +3,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
                     Niters=c(100,100), NfinalMCMC=Niters[2], walltime = Inf,
                     CMAargs=list(control=list(maxit=Niters[1])),
                     LDargs=list(control=list(abstol=0.1), Iterations=Niters[2], Algorithm='CHARM',
-                    Thinning=1), parm.names=NULL, keepall=FALSE, cores=1L
+                    Thinning=1), parm.names=NULL, keepall=FALSE, cores=1L, keep_all=FALSE
                     ){
 
   timestart = proc.time()[3] # start timer
@@ -28,7 +28,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       applyconstraints=applyconstraints, dynlim=dynlim, ablim=ablim,
       optim_iters=optim_iters, Niters=Niters, NfinalMCMC=NfinalMCMC,
       walltime=walltime, CMAargs=CMAargs, LDargs=LDargs, parm.names=parm.names,
-      keepall=keepall, cores=1L
+      keepall=keepall, cores=1L, keep_all=FALSE
     )
 
     if(.Platform$OS.type == "windows"){
@@ -57,6 +57,11 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     best_result$call = call
     best_result$date = date
     best_result$time = (proc.time()[3] - timestart) / 60
+    best_result$best_job = best_idx
+
+    if(keep_all){
+      best_result$High_jobs = results
+    }
 
     return(invisible(best_result))
   }
