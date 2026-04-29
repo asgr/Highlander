@@ -3,12 +3,63 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
                     Niters=c(100,100), NfinalMCMC=Niters[2], walltime = Inf,
                     CMAargs=list(control=list(maxit=Niters[1])),
                     LDargs=list(control=list(abstol=0.1), Iterations=Niters[2], Algorithm='CHARM',
-                    Thinning=1), parm.names=NULL, keepall=FALSE
+                    Thinning=1), parm.names=NULL, keepall=FALSE, cores=1L
                     ){
 
   timestart = proc.time()[3] # start timer
   date = date()
   call = match.call(expand.dots=TRUE)
+
+  # Validate cores
+  cores = as.integer(cores)
+  if(is.na(cores) || cores < 1L){
+    stop("'cores' must be an integer >= 1.")
+  }
+
+  # Parallel dispatch: run `cores` independent Highlander chains with staggered seeds
+  # and return the best result (highest LP). Uses mclapply on Unix/macOS and a PSOCK
+  # cluster on Windows so it is safe across all platforms.
+  if(cores > 1L){
+    seeds = seed + seq_len(cores) - 1L
+
+    run_args = list(
+      parm=parm, Data=Data, likefunc=likefunc, likefunctype=likefunctype,
+      liketype=liketype, lower=lower, upper=upper, applyintervals=applyintervals,
+      applyconstraints=applyconstraints, dynlim=dynlim, ablim=ablim,
+      optim_iters=optim_iters, Niters=Niters, NfinalMCMC=NfinalMCMC,
+      walltime=walltime, CMAargs=CMAargs, LDargs=LDargs, parm.names=parm.names,
+      keepall=keepall, cores=1L
+    )
+
+    if(.Platform$OS.type == "windows"){
+      cl = parallel::makeCluster(cores)
+      on.exit(parallel::stopCluster(cl), add=TRUE)
+      parallel::clusterExport(cl, varlist="run_args", envir=environment())
+      parallel::clusterEvalQ(cl, library(Highlander))
+      results = parallel::parLapply(cl, seeds, function(s){
+        run_args$seed = s
+        try(do.call(Highlander, run_args), silent=TRUE)
+      })
+    } else {
+      results = parallel::mclapply(seeds, function(s){
+        run_args$seed = s
+        try(do.call(Highlander, run_args), silent=TRUE)
+      }, mc.cores=cores)
+    }
+
+    LP_vals = sapply(results, function(r){
+      if(is.null(r) || inherits(r, "try-error") || is.null(r$LP)) -Inf else r$LP
+    })
+    best_idx = which.max(LP_vals)
+    best_result = results[[best_idx]]
+
+    # Patch the call, date and elapsed time from this top-level invocation
+    best_result$call = call
+    best_result$date = date
+    best_result$time = (proc.time()[3] - timestart) / 60
+
+    return(invisible(best_result))
+  }
 
   # Inputs:
 
