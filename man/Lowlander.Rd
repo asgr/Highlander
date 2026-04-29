@@ -12,9 +12,8 @@ tightened bounds equal to the column-wise min/max of the most plausible
 \option{pcut} fraction of samples.
 }
 \usage{
-Lowlander(lower, upper, Nsamp = 'auto', pcut = 0.1, sigcut = NULL, corcut = 0,
-  likefunc, Data, liketype = 'min', parm.names = NULL, seed = 666, latin = NULL,
-  ncores = 1)
+Lowlander(lower, upper, Data, likefunc, Nsamp = 'auto', pcut = 0.1, sigcut = NULL,
+  corcut = 0, liketype = 'min', parm.names = NULL, seed = 666, latin = NULL, ncores = 1)
 }
 \arguments{
   \item{lower}{
@@ -24,6 +23,13 @@ Numeric vector; lower limits of the parameter box. Must be the same length as
   \item{upper}{
 Numeric vector; upper limits of the parameter box. Must be the same length as
 \option{lower} and contain no NA values.
+}
+  \item{Data}{
+List; passed as the second argument to \option{likefunc} at every evaluation.
+}
+  \item{likefunc}{
+Function; takes arguments \option{parm} (numeric vector) and \option{Data}
+(list) and returns a single numeric scalar.
 }
   \item{Nsamp}{
 Positive integer scalar; number of Latin-hypercube samples to draw. Default 'auto' will
@@ -49,13 +55,6 @@ shrinkage is allowed. If used, sensible values are in the range 0.1-0.3 (much la
 and parameters will often not be allowed to shrink that could reasonably be). Default (0)
 means this test is not required, but the output \option{cor_data} still contains the relevant
 correlation matrix that allows users to inspect the covariance post running \code{Lowlander}.
-}
-  \item{likefunc}{
-Function; takes arguments \option{parm} (numeric vector) and \option{Data}
-(list) and returns a single numeric scalar.
-}
-  \item{Data}{
-List; passed as the second argument to \option{likefunc} at every evaluation.
 }
   \item{liketype}{
 Character scalar; \code{'min'} (default) keeps the \option{pcut} fraction of
@@ -141,8 +140,8 @@ Data = c(2, 5) #Try with more numbers and see how rapidly this becomes 'hard'
 Ndata = length(Data)
 
 result = Lowlander(
-  lower = rep(0, Ndata), upper = rep(10, Ndata), Nsamp = 1000, pcut = 0.05,
-  likefunc = likefunc, Data = Data, liketype = 'min'
+  lower = rep(0, Ndata), upper = rep(10, Ndata), Data = Data, likefunc = likefunc,
+  Nsamp = 1000, pcut = 0.05, likefunc = likefunc, Data = Data, liketype = 'min'
 )
 
 # New bounds should be tighter and centred near c(2, 5):
@@ -161,8 +160,8 @@ upper = rep(10, Ndata)
 for(i in 1:8){
     message('Iteration ', i)
     result = Lowlander(
-        lower = lower, upper = upper, Nsamp = 1000, pcut = 0.05, corcut = 0.3,
-        likefunc = likefunc, Data = Data, liketype = 'min'
+        lower = lower, upper = upper,  Data = Data, likefunc = likefunc, Nsamp = 1000,
+        pcut = 0.05, corcut = 0.3, liketype = 'min'
     )
     lower = result$lower
     upper = result$upper
