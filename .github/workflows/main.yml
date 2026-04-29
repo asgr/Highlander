@@ -52,7 +52,7 @@ jobs:
             any::foreach,
             any::knitr,
             any::rmarkdown,
-            any:lhs
+            any::lhs
 
       - uses: r-lib/actions/check-r-package@v2
         with:
