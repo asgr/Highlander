@@ -157,7 +157,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
              upper=upper), CMAargs))
       )
 
-      if(class(tempsafe)=="try-error"){
+      if(inherits(tempsafe, "try-error")){
         message('CMA failed!')
         CMA_out = list(
           value = Inf,
@@ -170,7 +170,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
             do.call('cmaeshpc', c(list(par=jitter(parm_out), fn=CMAfunc, Data=quote(DataCMA), lower=lower,
                                        upper=upper), CMAargs))
           )
-          if(class(tempsafe)=="try-error"){
+          if(inherits(tempsafe, "try-error")){
             message('CMA failed!')
             CMA_out = list(
               value = Inf,

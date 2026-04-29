@@ -12,8 +12,9 @@ tightened bounds equal to the column-wise min/max of the most plausible
 \option{pcut} fraction of samples.
 }
 \usage{
-Lowlander(lower, upper, Nsamp = 'auto', pcut = 0.1, corcut = 0, likefunc, Data,
-  liketype = 'min', seed = 666, latin = NULL, ncores = 1)
+Lowlander(lower, upper, Nsamp = 'auto', pcut = 0.1, sigcut = NULL, corcut = 0,
+  likefunc, Data, liketype = 'min', parm.names = NULL, seed = 666, latin = NULL,
+  ncores = 1)
 }
 \arguments{
   \item{lower}{
@@ -33,6 +34,13 @@ scale the number of paramters (i.e. length of \option{lower}) by x50 or use 2000
 Numeric scalar strictly in [0-1]; fraction of samples to \emph{keep}. The
 most plausible \option{pcut} fraction is retained (lowest values for
 \code{liketype='min'}, highest for \code{liketype='max'}).
+}
+  \item{sigcut}{
+Numeric scalar; the sigma value to use for an optional sigma clip of the post \option{pcut}
+parameters. This can be useful when the resulting distributions are very tail heavy, and big
+reductions are possible with even light sigma clipping. If left as the default (NULL) then
+the full range is used. Sensible values to try are between 2-3 (generally there are not
+enough surviving point post \option{Nsamp} x \option{pcut} to go higher).
 }
   \item{corcut}{
 Numeric scalar; the threshold of absolute correlation required between parameters and the
@@ -54,6 +62,10 @@ Character scalar; \code{'min'} (default) keeps the \option{pcut} fraction of
 samples with the \emph{smallest} \option{likefunc} values (Chi^2 / cost
 convention). \code{'max'} keeps the fraction with the \emph{largest} values
 (log-likelihood convention).
+}
+  \item{parm.names}{
+Character vector; optional vector of parameter names to produce easier to interpret outputs.
+If used, this must be the same length as \option{lower} and \option{upper.}
 }
   \item{seed}{
 Integer scalar or NULL (default); if not NULL, \code{set.seed(seed)} is called
@@ -84,9 +96,10 @@ The workflow is:
   \item Compute the quantile threshold at \option{pcut} (or \code{1-pcut}
         for \code{liketype='max'}) with \code{na.rm = TRUE}.
   \item Keep indices whose \option{likefunc} value is at or below (min) /
-        above (max) the threshold.
+        above (max) the threshold \option{pcut}.
   \item Require at least \code{Npar + 2} kept points so that meaningful
-        column-wise min/max bounds can be computed.
+        column-wise min/max bounds can be computed, or optionally use simga
+        clipped limits via \option{sigcut}.
   \item Optional require the correlation meets the threshold required by \option{corcut}.
   \item Return new \option{lower} and \option{upper} bounds and bookkeeping information.
 }
@@ -153,7 +166,8 @@ for(i in 1:8){
     )
     lower = result$lower
     upper = result$upper
-    message("Volume reduction: ", result$vol_red, "\nNew Lower: ", paste(round(lower,2), collapse=' '), '\nNew Upper: ', paste(round(upper,2), collapse=' '))
+    message("Volume reduction: ", result$vol_red, "\nNew Lower: ", paste(round(lower,2),
+    collapse=' '), '\nNew Upper: ', paste(round(upper,2), collapse=' '))
 }
 
 result$lower

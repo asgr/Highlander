@@ -22,13 +22,13 @@ Highlander(parm = NULL, Data, likefunc, likefunctype = NULL, liketype = NULL,
 Numeric vector; usual parameter vector- input to \option{likefunc}
 }
   \item{Data}{
-List; usual data input to \option{likefunc} This is where you should put all additional arguments needs since \code{\link{LaplacesDemon}} cannot be passed additional likelihood function arguments.
+List; usual data input to \option{likefunc} This is where you should put all additional arguments needs since \code{\link[LaplacesDemon]{LaplacesDemon}} cannot be passed additional likelihood function arguments.
 }
   \item{likefunc}{
 Function; takes arguments \option{parm} and \option{Data}; can output CMA scalar or LD list classes of outputs (this needs to be communicated by setting \option{likefunctype} as appropriate.
 }
   \item{likefunctype}{
-Character scalar; if \option{likefunc} outputs just the \code{abs(LP)} then 'CMA', if the list for LD then 'LD' (see \code{\link{LaplacesDemon}}). If left as NULL then it will attempt to guess the format based on the length of the \option{likefunc} output: if it is length 1 then it assumes \option{likefunctype} = 'CMA', otherwise it will assume 'LD'. This is usually correct.
+Character scalar; if \option{likefunc} outputs just the \code{abs(LP)} then 'CMA', if the list for LD then 'LD' (see \code{\link[LaplacesDemon]{LaplacesDemon}}). If left as NULL then it will attempt to guess the format based on the length of the \option{likefunc} output: if it is length 1 then it assumes \option{likefunctype} = 'CMA', otherwise it will assume 'LD'. This is usually correct.
 }
   \item{liketype}{
 Character scalar; is the likelihood output by \option{likefunc} defined in a way that means we want to minimise ('min'; Chi^2 type) or maximise ('max'; log-likelihood type) the function? If left as NULL the default assumes the standard minimisation setup of CMA (so 'min'), and maximisation setup of LD (so 'max').
@@ -61,16 +61,16 @@ Integer scalar; number of CMA / LD loops.
 Integer vector; number of iterations per CMA and LD respectively (must be length 2).
 }
   \item{NfinalMCMC}{
-Integer scalar; number of iterations to run for the final MCMC run. You might want to make this large if the idea is you are using the previous optimisation steps to find a good starting point, but you want to the final MCMC run using \code{\link{LaplacesDemon}} to provide detailed posterior inference.
+Integer scalar; number of iterations to run for the final MCMC run. You might want to make this large if the idea is you are using the previous optimisation steps to find a good starting point, but you want to the final MCMC run using \code{\link[LaplacesDemon]{LaplacesDemon}} to provide detailed posterior inference.
 }
   \item{walltime}{
 Numeric scalar; the maximum allowed CPU time for \code{Highlander} in minutes. The function will stop with the best solution to date once the walltime has been exceeded (although it does not stop mid CMA or MCMC, so the \option{walltime} will usually be exceeded a bit).
 }
   \item{CMAargs}{
-List; arguments to be passed into \code{\link{cmaeshpc}}.
+List; arguments to be passed into \code{\link[cmaeshpc]{cmaeshpc}}.
 }
   \item{LDargs}{
-List; arguments to be passed into \code{\link{LaplacesDemon}}.
+List; arguments to be passed into \code{\link[LaplacesDemon]{LaplacesDemon}}.
 }
   \item{parm.names}{
 Character vector; optional vector of parameter names. This will over-write the current names in \option{parm} if these also exist. If provided it ensures the \option{parm} and \option{CMA_last$par} outputs are named.

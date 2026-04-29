@@ -3,4 +3,4 @@ exportPattern("^[[:alpha:]]+")
 import("LaplacesDemon")
 import("cmaeshpc")
 
-importFrom("stats", "quantile")
+importFrom("stats", "quantile", "cor", "pnorm")

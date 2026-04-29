@@ -1,4 +1,4 @@
-Lowlander = function(lower, upper, Nsamp = 'auto', pcut = 0.1, corcut = 0,
+Lowlander = function(lower, upper, Nsamp = 'auto', pcut = 0.1, sigcut = NULL, corcut = 0,
                      likefunc, Data, liketype = 'min', parm.names = NULL,
                      seed = 666, latin = NULL, ncores = 1L) {
 
@@ -132,10 +132,17 @@ Lowlander = function(lower, upper, Nsamp = 'auto', pcut = 0.1, corcut = 0,
                 "Try increasing Nsamp or pcut."))
   }
 
-  # Compute new parameter bounds from kept samples
   kept_pars = latin_mod[keep, , drop = FALSE]
-  new_lower = apply(kept_pars, 2, min)
-  new_upper = apply(kept_pars, 2, max)
+
+  if(is.null(sigcut)){
+    # Compute new parameter bounds from kept samples
+    new_lower = apply(kept_pars, 2, min)
+    new_upper = apply(kept_pars, 2, max)
+  }else{
+    sigcut_pval = pnorm(-sigcut)
+    new_lower = apply(kept_pars, 2, quantile, sigcut_pval)
+    new_upper = apply(kept_pars, 2, quantile, 1 - sigcut_pval)
+  }
 
   if(corcut > 0){
     cor_sel = is.finite(cor_data[1:Npar, Npar + 1L]) & (abs(cor_data[1:Npar, (Npar + 1L)]) < corcut)
