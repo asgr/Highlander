@@ -124,21 +124,32 @@ Data=list(flux=flux_input,
           parm.names=c('mSFR','mpeak','mperiod','mskew','tau_birth','tau_screen',
                        'alpha_SF_birth','alpha_SF_screen'), # which parameters to fit for
           logged=c(T,T,T,F,T,T,F,F), # fit parameters in logged or linear space
-          intervals=list(lo=c(-4,-2,-1,-0.5,-2.5,-2.5,0,0), hi=c(3,1,1,1,1.5,1,4,4)), # fitting range for parameters
           fit = 'cma', # specifies the way in which the SED should be fitted ('LD', 'optim', 'CMA', or 'check')
-          mon.names=c('LP','masstot','SFRburst',paste('flux.',flux_input$filter,sep='')),
+          mon.names=c('masstot','SFRburst',paste('flux.',flux_input$filter,sep='')),
           N=length(filters), # number of observed filters
           like='norm',
           verbose=FALSE
   )
 ```
 
-Now we can run an MCMC fit using LaplacesDemon (depending on machine, this might take 10-20 minutes):
+```{r}
+lower = c(-4,-2,-1,-0.5,-2.5,-2.5,0,0)
+upper = c(3,1,1,1,1.5,1,4,4) # initial range for parameters
+
+# Note for Lowlander the only output from out likelihood function has to be LL of ChiSq:
+intervals = Lowlander(lower, upper, Data=Data, likefunc=ProSpectSEDlike, ncores=4)
+
+lower = intervals$lower
+upper = intervals$upper
+Data$fit = 'LD' # now we can switch it to full LD mode.
+```
+
+Now we can run an MCMC fit using **Highlander** (depending on machine, this might take 1-2 minutes):
 
 ```{r eval=FALSE}
-badpar = (Data$intervals$lo + Data$intervals$hi) / 2
-High_out = Highlander(badpar, ProSpectSEDlike, Data=Data,
-  lower=Data$intervals$lo, upper=Data$intervals$hi, Niters=c(200,200))
+badpar = (lower + upper) / 2
+High_out = Highlander(badpar, ProSpectSEDlike, Data=Data, lower=lower, upper=upper,
+                      Niters=c(200,200))
 ```
 
 ```{r eval=FALSE}
@@ -160,8 +171,7 @@ On Unix-like systems (Linux, macOS) `parallel::mclapply` is used, which forks th
 # Run 4 independent chains in parallel and keep the best result.
 # On a 4-core machine this takes roughly the same wall time as a single chain.
 High_out_mc = Highlander(badpar, ProSpectSEDlike, Data=Data,
-  lower=Data$intervals$lo, upper=Data$intervals$hi, Niters=c(200,200),
-  cores=4L)
+  lower=lower, upper=upper, Niters=c(200,200), cores=4L)
 
 # The returned object is identical in structure to the single-core output.
 # $parm holds the best parameters found across all parallel chains.
@@ -177,8 +187,7 @@ Use `keepall = TRUE` to retain the full output of every parallel chain. This is 
 ```{r eval=FALSE}
 # Run 4 chains in parallel, keeping all outputs.
 High_out_mc_all = Highlander(badpar, ProSpectSEDlike, Data=Data,
-  lower=Data$intervals$lo, upper=Data$intervals$hi, Niters=c(200,200),
-  cores=4L, keepall=TRUE)
+  lower=lower, upper=upper, Niters=c(200,200), cores=4L, keepall=TRUE)
 
 # High_jobs is a list of length cores; each element is a standard Highlander output.
 length(High_out_mc_all$High_jobs)  # 4
