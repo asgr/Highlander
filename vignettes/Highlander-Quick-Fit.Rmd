@@ -126,14 +126,14 @@ Data=list(flux=flux_input,
           logged=c(T,T,T,F,T,T,F,F), # fit parameters in logged or linear space
           intervals=list(lo=c(-4,-2,-1,-0.5,-2.5,-2.5,0,0), hi=c(3,1,1,1,1.5,1,4,4)), # fitting range for parameters
           fit = 'cma', # specifies the way in which the SED should be fitted ('LD', 'optim', 'CMA', or 'check')
-          mon.names=c('masstot','SFRburst',paste('flux.',flux_input$filter,sep='')),
+          mon.names=c('LP','masstot','SFRburst',paste('flux.',flux_input$filter,sep='')),
           N=length(filters), # number of observed filters
           like='norm',
           verbose=FALSE
   )
 ```
 
-Now we can run an MCMC fit using LaplacesDemon (depending on machine, this might take 1-2 minutes):
+Now we can run an MCMC fit using LaplacesDemon (depending on machine, this might take 10-20 minutes):
 
 ```{r eval=FALSE}
 badpar = (Data$intervals$lo + Data$intervals$hi) / 2
