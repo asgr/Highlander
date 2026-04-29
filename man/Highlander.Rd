@@ -35,7 +35,7 @@ Character scalar; if \option{likefunc} outputs just the \code{abs(LP)} then 'CMA
 Character scalar; is the likelihood output by \option{likefunc} defined in a way that means we want to minimise ('min'; Chi^2 type) or maximise ('max'; log-likelihood type) the function? If left as NULL the default assumes the standard minimisation setup of CMA (so 'min'), and maximisation setup of LD (so 'max').
 }
   \item{seed}{
-Integer scalar; random seed to start the \code{Highlander} function with.
+Integer scalar/vector; random seed to start the \code{Highlander} function with. If using multiple cores and the length of \option{seed} equals the number of cores, then those values will be used, else the seeds will become \option{seed} + 0:(\option{cores} - 1), i.e. the first job will use the \option{seed} provided, and the second job becomes \option{seed} + 1 etc.
 }
   \item{lower}{
 Numeric vector; lower limit allowed for \option{parm}; if \option{lower} = NULL and Data$intervals$lo = NULL it becomes the minimum of \option{parm}*(1/\option{dynlim})  - \option{ablim} or \option{parm}*\option{dynlim} - \option{ablim}; else if Data$intervals$lo is not NULL then this will be used instead.

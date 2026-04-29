@@ -20,7 +20,12 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   # and return the best result (highest LP). Uses mclapply on Unix/macOS and a PSOCK
   # cluster on Windows so it is safe across all platforms.
   if(cores > 1L){
-    seeds = seed + seq_len(cores) - 1L
+    if(length(seed) == cores){
+      seeds = seed
+    }else{
+      # Take just the first to be safe.
+      seeds = seed[1] + seq_len(cores) - 1L
+    }
 
     run_args = list(
       parm=parm, Data=Data, likefunc=likefunc, likefunctype=likefunctype,
@@ -36,13 +41,13 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       on.exit(parallel::stopCluster(cl), add=TRUE)
       parallel::clusterExport(cl, varlist="run_args", envir=environment())
       parallel::clusterEvalQ(cl, library(Highlander))
-      results = parallel::parLapply(cl, seeds, function(s){
-        run_args$seed = s
+      results = parallel::parLapply(cl, seeds, function(seed_in){
+        run_args$seed = seed_in
         try(do.call(Highlander, run_args), silent=TRUE)
       })
     } else {
-      results = parallel::mclapply(seeds, function(s){
-        run_args$seed = s
+      results = parallel::mclapply(seeds, function(seed_in){
+        run_args$seed = seed_in
         try(do.call(Highlander, run_args), silent=TRUE)
       }, mc.cores=cores)
     }
