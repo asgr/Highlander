@@ -1,5 +1,5 @@
 ---
-title: "Fake It Until You Make It"
+title: "Highlander: From the Valleys to the Peak"
 author: "Aaron Robotham"
 date: "`r Sys.Date()`"
 output: 
@@ -132,13 +132,18 @@ Data=list(flux=flux_input,
   )
 ```
 
+Now we are going to use **Lowlander** to find reasonble paramter limits for our fitting:
+
 ```{r}
+library(lhs)
+
 lower = c(-4,-2,-1,-0.5,-2.5,-2.5,0,0)
 upper = c(3,1,1,1,1.5,1,4,4) # initial range for parameters
 
-# Note for Lowlander the only output from out likelihood function has to be LL of ChiSq:
-intervals = Lowlander(lower, upper, Data=Data, likefunc=ProSpectSEDlike, ncores=4)
+# Note for Lowlander the only output from our likelihood function has to be LL of ChiSq:
+intervals = Lowlander(lower, upper, Data=Data, likefunc=ProSpectSEDlike)
 
+intervals$vol_red #the volume reduction factor, which is how much less hyper-space we wille explore.
 lower = intervals$lower
 upper = intervals$upper
 Data$fit = 'LD' # now we can switch it to full LD mode.
@@ -148,7 +153,7 @@ Now we can run an MCMC fit using **Highlander** (depending on machine, this migh
 
 ```{r eval=FALSE}
 badpar = (lower + upper) / 2
-High_out = Highlander(badpar, ProSpectSEDlike, Data=Data, lower=lower, upper=upper,
+High_out = Highlander(badpar, Data, ProSpectSEDlike, lower=lower, upper=upper,
                       Niters=c(200,200))
 ```
 
@@ -163,15 +168,15 @@ lines(check_out$SEDout$Stars$agevec, check_out$SEDout$Stars$SFR, col='red')
 
 ## Multi-Core Fitting
 
-`Highlander` supports parallel optimisation via the `cores` argument. Setting `cores > 1` launches that many independent `Highlander` chains simultaneously, each starting from a different random seed (`seed`, `seed+1`, ..., `seed+cores-1`). All chains explore the likelihood surface independently, and the chain that achieves the highest log-posterior (LP) is returned. This is particularly useful for multi-modal problems where a single chain may get trapped in a local optimum.
+**Highlander** supports parallel optimisation via the `cores` argument. Setting `cores > 1` launches that many independent **Highlander** chains simultaneously, each starting from a different random seed (`seed`, `seed+1`, ..., `seed+cores-1`). All chains explore the likelihood surface independently, and the chain that achieves the highest log-posterior (LP) is returned. This is particularly useful for multi-modal problems where a single chain may get trapped in a local optimum.
 
 On Unix-like systems (Linux, macOS) `parallel::mclapply` is used, which forks the current R process with no extra setup. On Windows a PSOCK cluster is used automatically — no changes to your code are needed when moving between platforms.
 
 ```{r eval=FALSE}
 # Run 4 independent chains in parallel and keep the best result.
 # On a 4-core machine this takes roughly the same wall time as a single chain.
-High_out_mc = Highlander(badpar, ProSpectSEDlike, Data=Data,
-  lower=lower, upper=upper, Niters=c(200,200), cores=4L)
+High_out_mc = Highlander(badpar, Data, ProSpectSEDlike, lower=lower,
+                         upper=upper, Niters=c(200,200), cores=4L)
 
 # The returned object is identical in structure to the single-core output.
 # $parm holds the best parameters found across all parallel chains.
@@ -186,8 +191,8 @@ Use `keepall = TRUE` to retain the full output of every parallel chain. This is 
 
 ```{r eval=FALSE}
 # Run 4 chains in parallel, keeping all outputs.
-High_out_mc_all = Highlander(badpar, ProSpectSEDlike, Data=Data,
-  lower=lower, upper=upper, Niters=c(200,200), cores=4L, keepall=TRUE)
+High_out_mc_all = Highlander(badpar, Data, ProSpectSEDlike, lower=lower, upper=upper,
+                             Niters=c(200,200), cores=4L, keepall=TRUE)
 
 # High_jobs is a list of length cores; each element is a standard Highlander output.
 length(High_out_mc_all$High_jobs)  # 4

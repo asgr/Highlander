@@ -1,5 +1,5 @@
-Lowlander = function(lower, upper, Nsamp = 'auto', pcut = 0.1, sigcut = NULL, corcut = 0,
-                     likefunc, Data, liketype = 'min', parm.names = NULL,
+Lowlander = function(lower, upper, Data, likefunc, Nsamp = 'auto', pcut = 0.1,
+                     sigcut = NULL, corcut = 0, liketype = 'min', parm.names = NULL,
                      seed = 666, latin = NULL, ncores = 1L) {
 
   # Input validation

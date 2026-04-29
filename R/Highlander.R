@@ -48,7 +48,11 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     }
 
     LP_vals = sapply(results, function(r){
-      if(is.null(r) || inherits(r, "try-error") || is.null(r$LP)) -Inf else r$LP
+      if(is.null(r) || inherits(r, "try-error") || is.null(r$LP) || is.na(r$LP) || !is.finite(r$LP)) {
+        -Inf
+      } else {
+        r$LP
+      }
     })
     best_idx = which.max(LP_vals)
     best_result = results[[best_idx]]
