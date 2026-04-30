@@ -32,6 +32,10 @@ argument, together with practical guidance on when and how to use each
 one.  The algorithms are grouped by conceptual family to make it easier
 to navigate the large menu.
 
+Much of the material and explanations for the algorithms was taken from
+the snapshot of the old Statisticat (creators of **LaplacesDemon**) website on
+Bayesian Inference captured on the Way Back Machine (see [Bayesian Inference](https://web.archive.org/web/20150128091453/http://www.bayesian-inference.com/index)).
+
 ## Notation
 
 Throughout this document we use the following notation:
