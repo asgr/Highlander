@@ -10,6 +10,24 @@ There Can be Only One! Finds the highest points in log-likelihood space by switc
 
 In recent work fitting spectral energy distributions with **ProSpect** we nearly always use **Highlander** for rapid and well explored fitting.
 
+## MCMC Algorithm Selection
+
+**Highlander** delegates MCMC sampling to the **LaplacesDemon** package, which provides dozens of algorithms (see `?LaplacesDemon::LaplacesDemon`). The default is CHARM (Componentwise Hit-And-Run Metropolis), which is a reliable general-purpose choice. Drawing on MCMC literature and the LaplacesDemon tutorial, the following guidelines can help when selecting an alternative via the `Algorithm` field of the `LDargs` argument:
+
+**4–8 parameters:** CHARM (default) performs well at low dimensions. NUTS (No-U-Turn Sampler) and HMCDA are very efficient when the log-posterior is differentiable and smooth. RAM (Robust Adaptive Metropolis) and Slice sampling are also strong choices, and the t-walk (twalk) requires no gradient information and is easy to apply.
+
+**8–20 parameters:** Gradient-based samplers become increasingly valuable as dimension grows. NUTS and HMCDA are recommended when a differentiable log-posterior is available. DEMC (Differential Evolution Markov Chain) handles correlated parameters well in this range. AFSS (Automated Factor Slice Sampler) is the LaplacesDemon-recommended general-purpose algorithm and adapts automatically. CHARM remains viable but may converge more slowly than gradient-based alternatives.
+
+**20–40 parameters:** NUTS continues to perform well when gradients are accessible. DEMC and AFSS (used with parameter blocks) are strong gradient-free options. AMWG (Adaptive Metropolis-within-Gibbs) with carefully selected blocks scales efficiently at this dimensionality. CHARM can still be used but is likely to mix slowly; blockwise versions such as AMM or AMWG are preferable.
+
+To switch algorithm, pass `Algorithm` via `LDargs`:
+
+```R
+Highlander(..., LDargs=list(Algorithm='NUTS', Iterations=1000, Thinning=1))
+```
+
+The `LaplacesDemon::Juxtapose` function can compare algorithm efficiencies on a simplified version of your problem before committing to a full run.
+
 ## Installation
 
 ### Getting Highlander
