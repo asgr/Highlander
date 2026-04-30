@@ -61,8 +61,8 @@ Fit <- LaplacesDemon(
   Initial.Values = iv,
   Iterations  = 10000,
   Thinning    = 10,
-  Algorithm   = "CHARM",          # <-- select algorithm here
-  Specs       = list(B = NULL)    # <-- algorithm-specific specs
+  Algorithm   = "CHARM",               # <-- select algorithm here
+  Specs       = list(alpha.star = NA)  # <-- algorithm-specific specs
 )
 ```
 
@@ -250,12 +250,12 @@ of smaller scale is attempted before the chain remains at the current
 state.  This reduces the probability of long sequences of rejections
 without violating detailed balance (Mira 2001).
 
-**Specs.**  None beyond the standard `B` block list.
+**Specs.**  `DRM` requires no `Specs` (pass `NULL` or omit).
 
 ```{r drm}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "DRM",
-  Specs     = list(B = NULL))
+  Specs     = NULL)
 ```
 
 ## Delayed Rejection Adaptive Metropolis (`DRAM`)
@@ -322,12 +322,18 @@ mixing than standard MH.
 
 | Spec | Description |
 |------|-------------|
-| `K` | Number of proposals per iteration (integer ≥ 1). |
+| `K`        | Number of proposals per iteration (integer ≥ 1). |
+| `CPUs`     | Number of CPUs for parallel proposal evaluation (≥ 1). |
+| `Packages` | Packages to load on each CPU (`NULL` if none). |
+| `Dyn.libs` | Dynamic libraries to load on each CPU (`NULL` if none). |
 
 ```{r mtm}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "MTM",
-  Specs     = list(K = 4))
+  Specs     = list(K        = 4,
+                   CPUs     = 1,
+                   Packages = NULL,
+                   Dyn.libs = NULL))
 ```
 
 ## Random Dive Metropolis-Hastings (`RDMH`)
@@ -339,12 +345,12 @@ $\theta'_j = \theta_j \cdot \exp(\epsilon_j)$, $\epsilon_j \sim
 sign problem of additive proposals when parameters are constrained to be
 positive.
 
-**Specs.**  None (standard `B` block argument).
+**Specs.**  `RDMH` requires no `Specs` (pass `NULL` or omit).
 
 ```{r rdmh}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "RDMH",
-  Specs     = list(B = NULL))
+  Specs     = NULL)
 ```
 
 ---
@@ -373,13 +379,12 @@ the scale $\sigma$ is tuned to approach that acceptance rate.
 
 | Spec | Description |
 |------|-------------|
-| `alpha.star` | Optional target acceptance rate (recommended 0.44 for componentwise). |
-| `B`          | Optional blocks. |
+| `alpha.star` | Optional target acceptance rate (recommended 0.44 for componentwise). Set to `NA` to disable adaptive scaling. |
 
 ```{r charm}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "CHARM",
-  Specs     = list(alpha.star = NULL, B = NULL))
+  Specs     = list(alpha.star = NA))
 ```
 
 ## Hit-And-Run Metropolis (`HARM`)
@@ -394,13 +399,13 @@ the chosen direction.
 
 | Spec | Description |
 |------|-------------|
-| `alpha.star` | Optional target acceptance rate. |
-| `B`          | Optional blocks. |
+| `alpha.star` | Optional target acceptance rate (recommended 0.234 for multivariate). Set to `NA` to disable adaptive scaling. |
+| `B`          | Optional list of blocks. |
 
 ```{r harm}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "HARM",
-  Specs     = list(alpha.star = NULL, B = NULL))
+  Specs     = list(alpha.star = NA, B = NULL))
 ```
 
 ## Adaptive Directional Metropolis-within-Gibbs (`ADMG`)
@@ -415,12 +420,13 @@ componentwise MH.
 
 | Spec | Description |
 |------|-------------|
-| `n` | Number of previous iterations (for continuing a run). |
+| `n`           | Number of previous iterations (for continuing a run). |
+| `Periodicity` | How often to adapt (iterations); defaults to `length(Initial.Values)`. |
 
 ```{r admg}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "ADMG",
-  Specs     = list(n = 0))
+  Specs     = list(n = 0, Periodicity = 1))
 ```
 
 ---
@@ -469,13 +475,20 @@ is exact up to the grid resolution and avoids Metropolis correction.
 
 | Spec | Description |
 |------|-------------|
-| `dparm` | Vector of indices of discrete parameters. |
-| `Grid`  | A vector (or list of vectors) of evenly-spaced grid points. |
+| `dparm`    | Vector of indices of discrete parameters (`NULL` for all continuous). |
+| `Grid`     | A vector (or list of vectors) of evenly-spaced grid points. |
+| `CPUs`     | Number of CPUs for parallel evaluation (≥ 1). |
+| `Packages` | Character vector of packages to load on each CPU (`NULL` if none). |
+| `Dyn.libs` | Character vector of dynamic libraries to load on each CPU (`NULL` if none). |
 
 ```{r gg}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "GG",
-  Specs     = list(dparm = NULL, Grid = seq(-0.1, 0.1, length.out = 5)))
+  Specs     = list(dparm    = NULL,
+                   Grid     = seq(-0.1, 0.1, length.out = 5),
+                   CPUs     = 1,
+                   Packages = NULL,
+                   Dyn.libs = NULL))
 ```
 
 ## Adaptive Griddy-Gibbs (`AGG`)
@@ -489,16 +502,22 @@ sampler.
 
 | Spec | Description |
 |------|-------------|
-| `dparm` | Discrete parameter indices. |
-| `Grid`  | Initial grid (adapted subsequently). |
-| `smax`  | Maximum allowable grid width (standard deviation). |
+| `dparm`    | Discrete parameter indices (`NULL` for all continuous). |
+| `Grid`     | Initial grid vector or list of vectors (adapted subsequently). |
+| `smax`     | Maximum allowable grid width (standard deviation). |
+| `CPUs`     | Number of CPUs for parallel evaluation (≥ 1). |
+| `Packages` | Packages to load on each CPU (`NULL` if none). |
+| `Dyn.libs` | Dynamic libraries to load on each CPU (`NULL` if none). |
 
 ```{r agg}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "AGG",
-  Specs     = list(dparm = NULL,
-                   Grid  = seq(-0.1, 0.1, length.out = 5),
-                   smax  = Inf))
+  Specs     = list(dparm    = NULL,
+                   Grid     = seq(-0.1, 0.1, length.out = 5),
+                   smax     = Inf,
+                   CPUs     = 1,
+                   Packages = NULL,
+                   Dyn.libs = NULL))
 ```
 
 ---
@@ -528,12 +547,22 @@ with $\beta = 2$.
 
 | Spec | Description |
 |------|-------------|
-| `beta` | Scale parameter (default 2). |
+| `Nc`       | Number of walkers (≥ 3; must be even when `CPUs > 1`). |
+| `Z`        | Optional $N_c \times d$ matrix of initial walker positions (`NULL` to auto-generate). |
+| `beta`     | Scale parameter controlling the stretch move (default 2; must be > 1). |
+| `CPUs`     | Number of CPUs for parallel walker updates (≥ 1). |
+| `Packages` | Packages to load on each CPU (`NULL` if none). |
+| `Dyn.libs` | Dynamic libraries to load on each CPU (`NULL` if none). |
 
 ```{r aies}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "AIES",
-  Specs     = list(beta = 2))
+  Specs     = list(Nc       = 16,
+                   Z        = NULL,
+                   beta     = 2,
+                   CPUs     = 1,
+                   Packages = NULL,
+                   Dyn.libs = NULL))
 ```
 
 ## Differential Evolution Markov Chain (`DEMC`)
@@ -606,12 +635,18 @@ This helps the cold chain escape local modes.
 
 | Spec | Description |
 |------|-------------|
-| `lambda` | Temperature spacing scalar or vector. |
+| `lambda` | Temperature spacing: scalar or vector of temperatures. |
+| `CPUs`   | Number of CPUs (must be ≥ 2; one per temperature). |
+| `Packages` | Packages to load on each CPU (`NULL` if none). |
+| `Dyn.libs` | Dynamic libraries to load on each CPU (`NULL` if none). |
 
 ```{r mcmcmc}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "MCMCMC",
-  Specs     = list(lambda = 1))
+  Specs     = list(lambda   = 1,
+                   CPUs     = 2,
+                   Packages = NULL,
+                   Dyn.libs = NULL))
 ```
 
 ---
@@ -688,16 +723,20 @@ target.
 
 | Spec | Description |
 |------|-------------|
-| `delta`   | Target acceptance rate (recommended 0.65). |
-| `epsilon` | Initial step size (or `NULL` for automatic initialisation). |
-| `lambda`  | Target trajectory length. |
-| `Lmax`    | Maximum leapfrog steps. |
+| `delta`    | Target acceptance rate (recommended 0.65). |
+| `epsilon`  | Initial step size (scalar; or `NULL` for automatic initialisation). |
+| `lambda`   | Target trajectory length. |
+| `Lmax`     | Maximum number of leapfrog steps. |
+| `A`        | Number of adaptive burn-in iterations to discard after dual-averaging. |
 
 ```{r hmcda}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "HMCDA",
-  Specs     = list(delta = 0.65, epsilon = NULL,
-                   lambda = 0.1, Lmax = 1000))
+  Specs     = list(A       = 500,
+                   delta   = 0.65,
+                   epsilon = NULL,
+                   lambda  = 0.1,
+                   Lmax    = 1000))
 ```
 
 ## No-U-Turn Sampler (`NUTS`)
@@ -900,16 +939,15 @@ with the posterior geometry.
 
 | Spec | Description |
 |------|-------------|
-| `A` | Adaptive burn-in to discard. |
-| `B` | Optional blocks. |
-| `m` | Maximum steps. |
-| `n` | Previous iterations. |
-| `w` | Initial interval width. |
+| `A` | Adaptive burn-in iterations to discard. |
+| `B` | Optional list of parameter blocks. |
+| `m` | Maximum steps for the slice interval. |
+| `n` | Number of previous iterations (for continuing a run). |
 
 ```{r uess}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "UESS",
-  Specs     = list(A = Inf, B = NULL, m = 100, n = 0, w = 1))
+  Specs     = list(A = Inf, B = NULL, m = 100, n = 0))
 ```
 
 ## Reflective Slice Sampler (`RSS`)
@@ -942,14 +980,13 @@ axis-aligned correlations.
 
 | Spec | Description |
 |------|-------------|
-| `A` | Adaptive burn-in. |
-| `n` | Previous iterations. |
-| `w` | Interval width. |
+| `A` | Number of adaptive (warm-up) iterations; when exceeded the chain stops adapting. |
+| `n` | Number of previous iterations (for continuing a run). |
 
 ```{r ohss}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "OHSS",
-  Specs     = list(A = Inf, n = 0, w = 1))
+  Specs     = list(A = Inf, n = 0))
 ```
 
 ## Elliptical Slice Sampler (`ESS`)
@@ -1012,17 +1049,15 @@ proposals that preferentially explore high-density regions.
 
 | Spec | Description |
 |------|-------------|
-| `Adaptive`    | Start of adaptation. |
-| `m`           | Steps per iteration. |
-| `Periodicity` | Adaptation frequency. |
-| `r`           | Refractive index ratio $r_1/r_2$. |
-| `w`           | Step size. |
+| `Adaptive` | Iteration at which adaptation begins. |
+| `m`        | Steps per iteration (integer ≥ 2). |
+| `w`        | Step size scalar. |
+| `r`        | Refractive index ratio $r_1/r_2$. |
 
 ```{r refractive}
 Fit <- LaplacesDemon(Model, MyData, iv,
   Algorithm = "Refractive",
-  Specs     = list(Adaptive = 500, m = 1,
-                   Periodicity = 10, r = 1.3, w = 0.5))
+  Specs     = list(Adaptive = 1, m = 2, w = 0.1, r = 1.3))
 ```
 
 ## Reversible-Jump (`RJ`)
