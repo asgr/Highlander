@@ -115,7 +115,7 @@ LumDist_Mpc = cosdistLumDist(z=0.1, H0 = 67.8, OmegaM = 0.308)
 ```
 
 ```{r}
-Data=list(flux=flux_input,
+Data = list(flux=flux_input,
           arglist=list(z=0.1, massfunc=massfunc_snorm_trunc, agemax=agemax, Z=Zfunc_massmap_lin, LumDist_Mpc=LumDist_Mpc),
           speclib=BC03lr, 
           Dale=Dale_NormTot, 
@@ -125,7 +125,6 @@ Data=list(flux=flux_input,
                        'alpha_SF_birth','alpha_SF_screen'), # which parameters to fit for
           logged=c(T,T,T,F,T,T,F,F), # fit parameters in logged or linear space
           fit = 'cma', # specifies the way in which the SED should be fitted ('LD', 'optim', 'CMA', or 'check')
-          mon.names=c('masstot','SFRburst',paste('flux.',flux_input$filter,sep='')),
           N=length(filters), # number of observed filters
           like='norm',
           verbose=FALSE
