@@ -84,7 +84,7 @@ Positive integer scalar; number of CPU cores to use (default 1). When \option{co
 }
 }
 \details{
-\code{Highlander} is designed to find good global solutions to highly multi-modal likelihood problems. It does this by oscillating between genetic algorithm stages, and classical MCMC stages. The latter produces
+\code{Highlander} is designed to find good global solutions to highly multi-modal likelihood problems. It does this by oscillating between genetic algorithm stages, and classical MCMC stages.
 }
 \value{
 A list output containing:
@@ -103,8 +103,11 @@ A list output containing:
 \item{time}{Numeric scalar; run time in minutes.}
 \item{CMA_all}{If \option{keepall} is TRUE then a list of all the CMA runs.}
 \item{LD_all}{If \option{keepall} is TRUE then a list of all the LD runs.}
-\item{best_job}{Integer scalar; present when \option{cores} > 1. Index (1-based) of the parallel chain that achieved the highest LP.}
+\item{LD_last_comb}{List; present when \option{cores} > 1 and \option{keepall} = TRUE. The combined outputs of all \option{LD_last} outputs from the various Highlander jobs run. This is probably what you want to use for exploring combined posteriors etc.}
+\item{best_job}{Integer scalar; present when \option{cores} > 1 and \option{keepall} = TRUE. Index (1-based) of the parallel chain that achieved the highest LP.}
 \item{High_jobs}{List; present when \option{cores} > 1 and \option{keepall} = TRUE. Contains the full \code{Highlander} output list for every parallel chain, in chain order. Use \option{best_job} to select the winning chain: \code{High_out$High_jobs[[High_out$best_job]]}.}
+
+When run in multicore mode \option{parm} through to \option{LD_all} inclusive are the results of the 'best' run. \option{LD_last_comb}, \option{best_job and \option{High_jobs} are only present when \option{cores} > 1 and \option{keepall} = TRUE.}
 }
 \author{
 Aaron Robotham
