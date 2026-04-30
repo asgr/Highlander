@@ -36,6 +36,11 @@ Much of the material and explanations for the algorithms was taken from
 the snapshot of the old Statisticat (creators of **LaplacesDemon**) website on
 Bayesian Inference captured on the Way Back Machine (see [Bayesian Inference](https://web.archive.org/web/20150128091453/http://www.bayesian-inference.com/index)).
 
+Much of the description and code snippets below were assembled with the help of Claude
+Sonnet 4.6 with further check and edits by Aaron Robotham. Hopefully clear mistakes have
+been fixed, but users should still apply their own critical thinking. Suggestions and
+mistakes can be posted as an Issue on GitHub asgr/Highlander.
+
 ## MCMC Algorithm Selection
 
 **Highlander** delegates MCMC sampling to the **LaplacesDemon** package, which provides dozens of algorithms (see `?LaplacesDemon::LaplacesDemon`). The default is CHARM (Componentwise Hit-And-Run Metropolis), which is a reliable general-purpose choice. Drawing on MCMC literature and the LaplacesDemon tutorial, the following guidelines can help when selecting an alternative via the `Algorithm` field of the `LDargs` argument:
@@ -46,7 +51,7 @@ Bayesian Inference captured on the Way Back Machine (see [Bayesian Inference](ht
 
 **20–40 parameters:** NUTS continues to perform well when gradients are accessible. DEMC and AFSS (used with parameter blocks) are strong gradient-free options. AMWG (Adaptive Metropolis-within-Gibbs) with carefully selected blocks scales efficiently at this dimensionality. CHARM can still be used but is likely to mix slowly; blockwise versions such as AMM or AMWG are preferable.
 
-**40-100 parameters:** fitting will be getting very hard, especially if likelihoods are not auto-differentialable (if they are, then probably you should be using **Stan** or similar at this point). The best approch will take some user experimentation, but CHARM is often not a bad starting point.
+**40-100 parameters:** fitting will be getting very hard, especially if likelihoods are not auto-differentiable (if they are, then probably you should be using **Stan** or similar at this point). The best approch will take some user experimentation, but CHARM is often not a bad starting point.
 
 To switch algorithm, pass `Algorithm` via `LDargs`:
 
