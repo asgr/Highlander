@@ -20,10 +20,12 @@ In recent work fitting spectral energy distributions with **ProSpect** we nearly
 
 **20–40 parameters:** NUTS continues to perform well when gradients are accessible. DEMC and AFSS (used with parameter blocks) are strong gradient-free options. AMWG (Adaptive Metropolis-within-Gibbs) with carefully selected blocks scales efficiently at this dimensionality. CHARM can still be used but is likely to mix slowly; blockwise versions such as AMM or AMWG are preferable.
 
+**40-100 parameters:** fitting will be getting very hard, especially if likelihoods are not auto-differentialable (if they are, then probably you should be using **Stan** or similar at this point). The best approch will take some user experimentation, but CHARM is often not a bad starting point.
+
 To switch algorithm, pass `Algorithm` via `LDargs`:
 
 ```R
-Highlander(..., LDargs=list(Algorithm='NUTS', Iterations=1000, Thinning=1))
+Highlander(..., LDargs=list(Algorithm='**SEE BELOW**', Specs = list(**SEE BELOW**), Iterations=1000, Thinning=1))
 ```
 
 The `LaplacesDemon::Juxtapose` function can compare algorithm efficiencies on a simplified version of your problem before committing to a full run.
