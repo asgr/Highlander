@@ -36,6 +36,26 @@ Much of the material and explanations for the algorithms was taken from
 the snapshot of the old Statisticat (creators of **LaplacesDemon**) website on
 Bayesian Inference captured on the Way Back Machine (see [Bayesian Inference](https://web.archive.org/web/20150128091453/http://www.bayesian-inference.com/index)).
 
+## MCMC Algorithm Selection
+
+**Highlander** delegates MCMC sampling to the **LaplacesDemon** package, which provides dozens of algorithms (see `?LaplacesDemon::LaplacesDemon`). The default is CHARM (Componentwise Hit-And-Run Metropolis), which is a reliable general-purpose choice. Drawing on MCMC literature and the LaplacesDemon tutorial, the following guidelines can help when selecting an alternative via the `Algorithm` field of the `LDargs` argument:
+
+**4–8 parameters:** CHARM (default) performs well at low dimensions. NUTS (No-U-Turn Sampler) and HMCDA are very efficient when the log-posterior is differentiable and smooth. RAM (Robust Adaptive Metropolis) and Slice sampling are also strong choices, and the t-walk (twalk) requires no gradient information and is easy to apply. AIES also works well in this domain, and is popular in astronomy.
+
+**8–20 parameters:** Gradient-based samplers become increasingly valuable as dimension grows. NUTS and HMCDA are recommended when a differentiable log-posterior is available. DEMC (Differential Evolution Markov Chain) handles correlated parameters well in this range. AFSS (Automated Factor Slice Sampler) is the LaplacesDemon-recommended general-purpose algorithm and adapts automatically. CHARM remains viable but may converge more slowly than gradient-based alternatives. AIES also works well in this domain, and is popular in astronomy.
+
+**20–40 parameters:** NUTS continues to perform well when gradients are accessible. DEMC and AFSS (used with parameter blocks) are strong gradient-free options. AMWG (Adaptive Metropolis-within-Gibbs) with carefully selected blocks scales efficiently at this dimensionality. CHARM can still be used but is likely to mix slowly; blockwise versions such as AMM or AMWG are preferable.
+
+**40-100 parameters:** fitting will be getting very hard, especially if likelihoods are not auto-differentialable (if they are, then probably you should be using **Stan** or similar at this point). The best approch will take some user experimentation, but CHARM is often not a bad starting point.
+
+To switch algorithm, pass `Algorithm` via `LDargs`:
+
+```R
+Highlander(..., LDargs=list(Algorithm='**SEE BELOW**', Specs = list(**SEE BELOW**), Iterations=1000, Thinning=1))
+```
+
+The `LaplacesDemon::Juxtapose` function can compare algorithm efficiencies on a simplified version of your problem before committing to a full run.
+
 ## Notation
 
 Throughout this document we use the following notation:
@@ -106,7 +126,7 @@ $$
 For well-tuned proposals the optimal acceptance rate is approximately
 23.4% for high-dimensional targets (Roberts et al. 1997).
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -130,7 +150,7 @@ equivalent to importance sampling within an MH accept/reject step.  It
 is most efficient when $q$ closely approximates $\pi$, and can be used
 with a multivariate normal or t proposal centred on the posterior mode.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -154,7 +174,7 @@ parameters.  The proposal variance for each component is tuned
 adaptively to reach a target acceptance rate of approximately 44%.
 This is the default algorithm in **LaplacesDemon**.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -179,7 +199,7 @@ log-scale proposal standard deviations following Roberts and Rosenthal
 incremented or decremented to push each component's acceptance rate
 towards 44%.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -208,7 +228,7 @@ $$
 where $s_d = 2.38^2/d$ is the theoretically optimal scaling for a
 Gaussian target (Gelman et al. 1996).
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -230,7 +250,7 @@ adaptive multivariate proposal with probability $1-w$.  This helps
 maintain ergodicity while benefiting from adaptation
 (Roberts & Rosenthal 2009).
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -254,7 +274,7 @@ of smaller scale is attempted before the chain remains at the current
 state.  This reduces the probability of long sequences of rejections
 without violating detailed balance (Mira 2001).
 
-**Specs.**  `DRM` requires no `Specs` (pass `NULL` or omit).
+**Specs**  `DRM` requires no `Specs` (pass `NULL` or omit).
 
 ```{r drm}
 Fit <- LaplacesDemon(Model, MyData, iv,
@@ -269,7 +289,7 @@ multivariate proposal of AM.  After `Adaptive` iterations the proposal
 covariance is updated every `Periodicity` iterations, and rejected
 proposals trigger a second, smaller attempt (Haario et al. 2006).
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -296,7 +316,7 @@ $$
 where $u_t = \theta' - \theta^{(t)}$ and $\eta_t = \min(1, d\,t^{-\gamma})$.
 RAM is guaranteed to converge under mild conditions.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -322,7 +342,7 @@ and accepted via a modified MH ratio that maintains detailed balance
 (Liu et al. 2000).  For a fixed computational budget it can achieve better
 mixing than standard MH.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -349,7 +369,7 @@ $\theta'_j = \theta_j \cdot \exp(\epsilon_j)$, $\epsilon_j \sim
 sign problem of additive proposals when parameters are constrained to be
 positive.
 
-**Specs.**  `RDMH` requires no `Specs` (pass `NULL` or omit).
+**Specs**  `RDMH` requires no `Specs` (pass `NULL` or omit).
 
 ```{r rdmh}
 Fit <- LaplacesDemon(Model, MyData, iv,
@@ -379,7 +399,7 @@ Unlike standard MWG, CHARM mixes coordinate directions, which can aid
 mixing when parameters are correlated.  When `alpha.star` is provided,
 the scale $\sigma$ is tuned to approach that acceptance rate.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -399,7 +419,7 @@ hit-and-run for uniform sampling over convex sets; the HARM variant
 adapts it to general log-concave targets using Gaussian proposals along
 the chosen direction.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -420,7 +440,7 @@ for each component is adapted using past samples to align with the local
 curvature of the posterior, reducing the correlations that slow
 componentwise MH.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -449,7 +469,7 @@ returns updated parameters from their full conditionals.  This is the
 exact Gibbs sampler of Geman and Geman (1984); no Metropolis–Hastings
 correction is needed because samples are drawn exactly.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -475,7 +495,7 @@ Ritter and Tanner (1992) proposed evaluating the unnormalised
 conditional on a user-defined grid and drawing via inverse CDF.  This
 is exact up to the grid resolution and avoids Metropolis correction.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -502,7 +522,7 @@ running variance of each parameter.  This removes the burden of
 hand-tuning the grid while preserving the exact-Gibbs character of the
 sampler.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -547,7 +567,7 @@ where $g$ is chosen so the sampler is affine-invariant.  The default
 choice gives $Z$ with PDF $g(z) \propto z^{-1/2}$ on $[1/\beta, \beta]$
 with $\beta = 2$.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -584,7 +604,7 @@ where $\gamma = 2.38/\sqrt{2d}$ by default.  A "snooker" update
 (probability $w$) projects along the line connecting the current chain
 to a randomly-chosen history point.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -606,7 +626,7 @@ uses parallel chains to adapt a shared proposal covariance.  Regional
 information from nearby chains is combined to improve the proposal for
 each chain, yielding faster mixing than independent AM chains.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -635,7 +655,7 @@ $$
 
 This helps the cold chain escape local modes.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -680,7 +700,7 @@ $\nabla_\theta \log\pi(\theta)$ must be evaluated at each leapfrog
 step, making it expensive per iteration but typically much more
 efficient per independent sample than gradient-free methods.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -700,7 +720,7 @@ Fit <- LaplacesDemon(Model, MyData, iv,
 covariance of the chain, removing the need to hand-tune these HMC
 parameters.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -723,7 +743,7 @@ achieve a target acceptance rate $\delta$ (typically 0.65), and adapts
 the trajectory length $\lambda = L\epsilon$ to a fixed user-supplied
 target.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -750,7 +770,7 @@ by automatically stopping the leapfrog trajectory when it would start to
 backtrack ("make a U-turn").  Combined with dual-averaging for $\epsilon$,
 NUTS is nearly parameter-free and often outperforms hand-tuned HMC.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -773,7 +793,7 @@ half of the leapfrog trajectory and cools it in the second half,
 controlled by a `Temperature` parameter.  Higher temperatures encourage
 exploration of multimodal posteriors.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -802,7 +822,7 @@ followed by an MH correction.  Atchadé (2006) proposed an adaptive
 truncated version that clips the drift to prevent divergence.  The
 optimal acceptance rate for MALA is approximately 57.4%.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -828,7 +848,7 @@ drawn from a large dataset stored on disk, and a noisy gradient is used
 in a Langevin step with step size $\epsilon_t$.  No MH correction is
 needed when $\epsilon_t \to 0$.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -859,7 +879,7 @@ where $C$ is a prior covariance.  pCN is dimension-robust: its
 acceptance rate does not degrade as dimension increases, making it
 suitable for large hierarchical models.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -888,7 +908,7 @@ each parameter (or block) an interval of width $w$ is grown until it
 brackets the slice, then a point is drawn uniformly from the interval
 and shrunk if necessary.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -916,7 +936,7 @@ with the principal axes of the posterior.  This greatly reduces the
 number of steps needed to create the slice in correlated,
 high-dimensional problems.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -939,7 +959,7 @@ of the empirical covariance matrix of the chain.  Moving along
 decorrelated directions yields a slice interval that is better aligned
 with the posterior geometry.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -961,7 +981,7 @@ proposal off the boundary of the slice rather than shrinking, following
 the trajectory of a billiard ball.  This can give better mixing in
 elongated or curved posteriors.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -980,7 +1000,7 @@ Fit <- LaplacesDemon(Model, MyData, iv,
 (rotated) hyperrectangles, allowing better coverage of posteriors with
 axis-aligned correlations.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -1001,7 +1021,7 @@ using the current state and a Gaussian draw; the algorithm searches the
 ellipse for a point that satisfies the likelihood slice condition.  No
 tuning is required.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -1026,7 +1046,7 @@ four "kernels": walk, traverse, blow, and hop.  The traverse kernel
 generates proposals along the line connecting the two points and is
 particularly effective for correlated posteriors.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -1049,7 +1069,7 @@ by Snell's law of refraction.  A particle crosses the boundary of a
 according to the ratio of densities on either side.  This creates
 proposals that preferentially explore high-density regions.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -1072,7 +1092,7 @@ joint inference over model selection and parameters.  At each iteration
 a parameter is either added to or removed from the active set, with a
 binomial prior on model size.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -1106,7 +1126,7 @@ time-periods.
 a sequential state-space model.  The `Dyn` matrix specifies dynamic
 parameter values for each of $T$ time-periods.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -1123,7 +1143,7 @@ Fit <- LaplacesDemon(Model, MyData, iv,
 **Description.**  Extends SMWG with componentwise adaptive proposals for
 dynamic parameters.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -1142,7 +1162,7 @@ Fit <- LaplacesDemon(Model, MyData, iv,
 inference.  Past samples stored in a `Fit` object are retained; only
 the time-periods from `Begin` onwards are re-sampled.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
@@ -1161,7 +1181,7 @@ Fit_update <- LaplacesDemon(Model, MyData, iv,
 **Description.**  Combines the adaptive proposals of SAMWG with the
 online updating capability of USMWG.
 
-**Specs.**
+**Specs**
 
 | Spec | Description |
 |------|-------------|
