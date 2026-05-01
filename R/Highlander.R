@@ -1,9 +1,11 @@
 Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
-                    seed=666, lower=NULL, upper=NULL, applyintervals=TRUE, applyconstraints=TRUE, dynlim=2, ablim=0, optim_iters=2,
+                    Algorithm='CHARM', seed=666, lower=NULL, upper=NULL,
+                    applyintervals=TRUE,
+                    applyconstraints=TRUE, dynlim=2, ablim=0, optim_iters=2,
                     Niters=c(100,100), NfinalMCMC=Niters[2], walltime = Inf,
                     CMAargs=list(control=list(maxit=Niters[1])),
-                    LDargs=list(control=list(abstol=0.1), Iterations=Niters[2], Algorithm='CHARM',
-                    Thinning=1), parm.names=NULL, keepall=FALSE, cores=1L
+                    LDargs=list(control=list(abstol=0.1), Iterations=Niters[2], Algorithm=Algorithm,
+                    Thinning=1, Specs=Specs_help(Algorithm, Data)), parm.names=NULL, keepall=FALSE, cores=1L
                     ){
 
   timestart = proc.time()[3] # start timer
