@@ -164,7 +164,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       .convert_CMA2CMA(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
   }else{
-    DataCMA[['mon.names']] = ''
+    DataCMA[['mon.names']] = character(0)
     CMAfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
       .convert_LD2CMA(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
@@ -412,7 +412,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     # likefunc actually use the contents of mon.names to determine outputs
     Data[['mon.names']] = Data[['mon.names']][2:length(Data[['mon.names']])]
   }else{
-    Data[['mon.names']] = ''
+    Data[['mon.names']] = character(0)
   }
 
   output = likefunc(parm, Data)
