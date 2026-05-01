@@ -181,9 +181,6 @@ High_out_mc = Highlander(badpar, Data, ProSpectSEDlike, lower=lower,
 # $parm holds the best parameters found across all parallel chains.
 High_out_mc$parm
 High_out_mc$LP
-
-# best_job records which chain (1-indexed) achieved the highest LP.
-High_out_mc$best_job
 ```
 
 Use `keepall = TRUE` to retain the full output of every parallel chain. This is useful when you want to compare posterior distributions across chains, or diagnose convergence problems:

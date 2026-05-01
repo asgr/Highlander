@@ -68,7 +68,9 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     best_result$time = (proc.time()[3] - timestart) / 60
 
     if(keepall){
-      best_result$LD_last_comb = LaplacesDemon::Combine(lapply(results,\(x) x$LDlast))
+      #Make sure the mon.names will match up with what we do internally
+      Data[['mon.names']] = c("LP", Data[['mon.names']][! Data[['mon.names']] == 'LP'])
+      best_result$LD_last_comb = LaplacesDemon::Combine(lapply(results,\(x) x$LD_last), Data=Data)
       best_result$best_job = best_idx
       best_result$High_jobs = results
     }
@@ -173,7 +175,12 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   DataLD = Data
 
   if(likefunctype == 'LD'){
-    DataLD[['mon.names']] = c('LP', DataLD[['mon.names']])
+    if(is.null(DataLD[['mon.names']])){
+      DataLD[['mon.names']] = "LP"
+    }else{
+      DataLD[['mon.names']] = c("LP", DataLD[['mon.names']][! DataLD[['mon.names']] == 'LP'])
+    }
+
     if(is.null(DataLD[['parm.names']])){
       DataLD[['parm.names']] = letters[1:length(parm)]
     }
@@ -184,7 +191,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       .convert_LD2LD(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
     }
   }else{
-    DataLD[['mon.names']] = 'LP'
+    DataLD[['mon.names']] = "LP"
     if(is.null(DataLD[['parm.names']])){
       DataLD[['parm.names']] = letters[1:length(parm)]
     }
@@ -407,17 +414,18 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     parm[parm<Data[['intervals']]$lo] = Data[['intervals']]$lo[parm<Data[['intervals']]$lo]
     parm[parm>Data[['intervals']]$hi] = Data[['intervals']]$hi[parm>Data[['intervals']]$hi]
   }
+
   if(length(Data[['mon.names']]) > 1){
     # This is so we remove the leading LP internally since some
     # likefunc actually use the contents of mon.names to determine outputs
     Data[['mon.names']] = Data[['mon.names']][2:length(Data[['mon.names']])]
+    useful_mon = TRUE
   }else{
-    Data[['mon.names']] = ''
+    Data[['mon.names']] == ""
+    useful_mon = FALSE
   }
 
   output = likefunc(parm, Data)
-
-
 
   if(liketype=='min'){
     fnscale = -1
@@ -425,10 +433,16 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     fnscale = 1
   }
 
+  if(useful_mon){
+    Monitor = c(fnscale*output$LP, output$Monitor)
+  }else{
+    Monitor = output$Monitor
+  }
+
   if(!is.null(output[['parm']])){
     parm = output[['parm']]
   }
 
-  # We add the expected LP back to the frong of Monitor output
-  return(list(LP=fnscale*output$LP, Dev=fnscale*output$Dev, Monitor=c(fnscale*output$LP,output$Monitor), yhat=output$yhat, parm=parm))
+  # We add the expected LP back to the front of Monitor output
+  return(list(LP=fnscale*output$LP, Dev=fnscale*output$Dev, Monitor=Monitor, yhat=output$yhat, parm=parm))
 }
