@@ -82,7 +82,7 @@ Numeric scalar; the maximum allowed CPU time for \code{Highlander} in minutes. T
 List; arguments to be passed into \code{\link[cmaeshpc]{cmaeshpc}}.
 }
   \item{LDargs}{
-List; arguments to be passed into \code{\link[LaplacesDemon]{LaplacesDemon}}. Note that \option{Algorithm} is passed into the args by default. \option{Specs} is by default populated with the defaults obtains from \code{\link{Specs_help}}, if non-defaults are desired then the entirity of \option{LDargs} must by written and either extra arguments passed into \code{\link{Specs_help}} via \dots or a user defined list is passed explicitly (see \code{\link[LaplacesDemon]{LaplacesDemon}}).
+List; arguments to be passed into \code{\link[LaplacesDemon]{LaplacesDemon}}. Note that \option{Algorithm} is passed into the args by default. \option{Specs} is by default populated with the defaults obtained from \code{\link{Specs_help}}, if non-defaults are desired then the entirety of \option{LDargs} must be written and either extra arguments passed into \code{\link{Specs_help}} via \dots or a user defined list is passed explicitly (see \code{\link[LaplacesDemon]{LaplacesDemon}}).
 }
   \item{parm.names}{
 Character vector; optional vector of parameter names. This will over-write the current names in \option{parm} if these also exist. If provided it ensures the \option{parm} and \option{CMA_last$par} outputs are named.

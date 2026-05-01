@@ -29,7 +29,7 @@ List; AIES can generate sensible default \option{Nc} if provided with
 LD style \option{Data}. This defaults to 2 x length(\option{parm.names}).
 }
   \item{\dots}{
-List; Named list where we wish to over-ride the defaults for a particular algorithm. See Examples.
+List; Named list where we wish to override the defaults for a particular algorithm. See Examples.
 }
 }
 \details{

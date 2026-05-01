@@ -85,7 +85,7 @@ Specs_help = function(Algorithm = 'CHARM', Data = NULL, ...) {
 
   } else if (Algorithm == 'HARM') {
     # Hit-And-Run Metropolis
-    if('alpha.star' %in% names(dots)){
+    if(any(c('alpha.star', 'B') %in% names(dots))){
       Specs_list = list(alpha.star = 0.234, B = NULL)
     }else{
       Specs_list = NULL
