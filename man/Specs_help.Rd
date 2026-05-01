@@ -12,7 +12,7 @@ is returned with placeholder values and an informative message is printed
 to guide the user.
 }
 \usage{
-Specs_help(Algorithm = 'CHARM')
+Specs_help(Algorithm = 'CHARM', Data = NULL, ...)
 }
 \arguments{
   \item{Algorithm}{
@@ -23,6 +23,13 @@ are: ADMG, AFSS, AGG, AHMC, AIES, AM, AMM, AMWG, CHARM, DEMC, DRAM, DRM,
 ESS, GG, Gibbs, HARM, HMC, HMCDA, IM, INCA, MALA, MCMCMC, MTM, MWG, NUTS,
 OHSS, pCN, RAM, RDMH, Refractive, RJ, RSS, RWM, SAMWG, SGLD, Slice, SMWG,
 THMC, twalk, UESS, USAMWG, USMWG.
+}
+  \item{Data}{
+List; AIES can generate sensible default \option{Nc} if provided with
+LD style \option{Data}. This defaults to 2 x length(\option{parm.names}).
+}
+  \item{\dots}{
+List; Named list where we wish to over-ride the defaults for a particular algorithm. See Examples.
 }
 }
 \details{
@@ -48,6 +55,11 @@ Aaron Robotham
 \examples{
 # Default algorithm (CHARM):
 Specs_help('CHARM')
+# Use a non-default NA alpha.star (0.234 is suggested for multi-variate sampling):
+Specs_help('CHARM', alpha.star=0.234)
+
+# Affine-Invariant Ensemble Sampler:
+Specs_help('AIES')
 
 # Adaptive Metropolis:
 Specs_help('AM')
