@@ -9,12 +9,14 @@ There Can be Only One! Finds the highest points in log-likelihood space by switc
 }
 \usage{
 Highlander(parm = NULL, Data, likefunc, likefunctype = NULL, liketype = NULL,
-  seed = 666, lower = NULL, upper = NULL, applyintervals = TRUE, applyconstraints = TRUE,
-  dynlim = 2, ablim = 0, optim_iters = 2, Niters = c(100,100), NfinalMCMC = Niters[2],
-  walltime = Inf, CMAargs = list(control=list(maxit=Niters[1])),
-  LDargs = list(control=list(abstol=0.1), Iterations = Niters[2],
-  Algorithm = 'CHARM', Thinning = 1), parm.names = NULL, keepall = FALSE,
-  cores = 1L
+  Algorithm = "CHARM", seed = 666, lower = NULL, upper = NULL,
+  applyintervals = TRUE, applyconstraints = TRUE,
+  dynlim = 2, ablim = 0, optim_iters = 2,
+  Niters = c(100,100), NfinalMCMC = Niters[2], walltime = Inf,
+  CMAargs = list(control=list(maxit=Niters[1])),
+  LDargs = list(control = list(abstol = 0.1), Iterations = Niters[2],
+    Algorithm = Algorithm, Thinning = 1, Specs = Specs_help(Algorithm, Data)),
+  parm.names = NULL, keepall = FALSE, cores = 1L
   )
 }
 %- maybe also 'usage' for other objects documented here.
@@ -33,6 +35,15 @@ Character scalar; if \option{likefunc} outputs just the \code{abs(LP)} then 'CMA
 }
   \item{liketype}{
 Character scalar; is the likelihood output by \option{likefunc} defined in a way that means we want to minimise ('min'; Chi^2 type) or maximise ('max'; log-likelihood type) the function? If left as NULL the default assumes the standard minimisation setup of CMA (so 'min'), and maximisation setup of LD (so 'max').
+}
+  \item{Algorithm}{
+Character scalar; the short algorithm name recognised by
+\code{\link[LaplacesDemon]{LaplacesDemon}}, e.g. \option{CHARM},
+\option{AIES}, \option{MWG}. Defaults to \option{CHARM}. Supported values
+are: ADMG, AFSS, AGG, AHMC, AIES, AM, AMM, AMWG, CHARM, DEMC, DRAM, DRM,
+ESS, GG, Gibbs, HARM, HMC, HMCDA, IM, INCA, MALA, MCMCMC, MTM, MWG, NUTS,
+OHSS, pCN, RAM, RDMH, Refractive, RJ, RSS, RWM, SAMWG, SGLD, Slice, SMWG,
+THMC, twalk, UESS, USAMWG, USMWG.
 }
   \item{seed}{
 Integer scalar/vector; random seed to start the \code{Highlander} function with. If using multiple cores and the length of \option{seed} equals the number of cores, then those values will be used, else the seeds will become \option{seed} + 0:(\option{cores} - 1), i.e. the first job will use the \option{seed} provided, and the second job becomes \option{seed} + 1 etc.
@@ -71,7 +82,7 @@ Numeric scalar; the maximum allowed CPU time for \code{Highlander} in minutes. T
 List; arguments to be passed into \code{\link[cmaeshpc]{cmaeshpc}}.
 }
   \item{LDargs}{
-List; arguments to be passed into \code{\link[LaplacesDemon]{LaplacesDemon}}.
+List; arguments to be passed into \code{\link[LaplacesDemon]{LaplacesDemon}}. Note that \option{Algorithm} is passed into the args by default. \option{Specs} is by default populated with the defaults obtains from \code{\link{Specs_help}}, if non-defaults are desired then the entirity of \option{LDargs} must by written and either extra arguments passed into \code{\link{Specs_help}} via \dots or a user defined list is passed explicitly (see \code{\link[LaplacesDemon]{LaplacesDemon}}).
 }
   \item{parm.names}{
 Character vector; optional vector of parameter names. This will over-write the current names in \option{parm} if these also exist. If provided it ensures the \option{parm} and \option{CMA_last$par} outputs are named.

@@ -51,8 +51,11 @@ Specs_help = function(Algorithm = 'CHARM', Data = NULL, ...) {
 
   } else if (Algorithm == 'CHARM') {
     # Componentwise Hit-And-Run Metropolis
-    Specs_list = list(alpha.star = NA)
-
+    if('alpha.star' %in% names(dots)){
+      Specs_list = list(alpha.star = 0.234)
+    }else{
+      Specs_list = NULL
+    }
   } else if (Algorithm == 'DEMC') {
     # Differential Evolution Markov Chain (Specs required – no default)
     Specs_list = list(Nc = 3, Z = NULL, gamma = NULL, w = 0.1)
@@ -82,8 +85,11 @@ Specs_help = function(Algorithm = 'CHARM', Data = NULL, ...) {
 
   } else if (Algorithm == 'HARM') {
     # Hit-And-Run Metropolis
-    Specs_list = list(alpha.star = NA, B = NULL)
-
+    if('alpha.star' %in% names(dots)){
+      Specs_list = list(alpha.star = 0.234, B = NULL)
+    }else{
+      Specs_list = NULL
+    }
   } else if (Algorithm == 'HMC') {
     # Hamiltonian Monte Carlo
     # epsilon and m depend on the number of parameters; placeholders shown here
@@ -168,7 +174,7 @@ Specs_help = function(Algorithm = 'CHARM', Data = NULL, ...) {
   } else if (Algorithm == 'SAMWG') {
     # Sequential Adaptive Metropolis-within-Gibbs (Specs required – no default)
     message('SAMWG requires user-supplied Specs. Dyn must be a matrix.')
-    Specs_list = list(Dyn = NULL, Periodicity = 1)
+    Specs_list = list(Dyn = NULL, Periodicity = 50)
 
   } else if (Algorithm == 'SGLD') {
     # Stochastic Gradient Langevin Dynamics (Specs required – no default)
