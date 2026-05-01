@@ -1,27 +1,3 @@
-#' Return the default Specs list for a LaplacesDemon algorithm
-#'
-#' @description
-#' Given a LaplacesDemon algorithm name, \code{Specs_help} returns the
-#' corresponding default \code{Specs} list that can be passed directly to
-#' \code{\link[LaplacesDemon]{LaplacesDemon}}.  For algorithms that have no
-#' built-in defaults (i.e. the user must supply all values), a template list
-#' is returned with placeholder values and an informative \code{message} is
-#' printed to guide the user.
-#'
-#' @param Algorithm Character scalar. The short algorithm name recognised by
-#'   \code{LaplacesDemon}, e.g. \code{'CHARM'}, \code{'AIES'}, \code{'MWG'}.
-#'   Defaults to \code{'CHARM'}.
-#'
-#' @return A named list suitable for passing as the \code{Specs} argument of
-#'   \code{LaplacesDemon}, or \code{NULL} for algorithms that do not use
-#'   \code{Specs} (e.g. \code{'DRM'} and \code{'RDMH'}).
-#'
-#' @examples
-#' Specs_help('CHARM')
-#' Specs_help('AIES')
-#' Specs_help('MWG')
-#'
-#' @export
 Specs_help = function(Algorithm = 'CHARM') {
   # Returns the default Specs list for the given LaplacesDemon Algorithm name.
   # For algorithms that require user-supplied values (no built-in defaults),
