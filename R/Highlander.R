@@ -72,7 +72,9 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     if(keepall){
       #Make sure the mon.names will match up with what we do internally
       Data[['mon.names']] = c("LP", Data[['mon.names']][! Data[['mon.names']] == 'LP'])
-      best_result$LD_last_comb = LaplacesDemon::Combine(lapply(results,\(x) x$LD_last), Data=Data)
+      best_result$LD_last_comb = try(
+        LaplacesDemon::Combine(lapply(results,\(x) x$LD_last), Data=Data)
+      )
       best_result$best_job = best_idx
       best_result$High_jobs = results
     }
