@@ -438,7 +438,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }
 
   if(useful_mon){
-    Monitor = c(fnscale*output$LP, output$Monitor)
+    # Need to check we don't also return LP elsewhere
+    Monitor = c(fnscale*output$LP, output$Monitor[!names(output$Monitor) == 'LP'])
   }else{
     Monitor = output$Monitor
   }
