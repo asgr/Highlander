@@ -1,6 +1,6 @@
 Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
                     Algorithm='CHARM', seed=666, lower=NULL, upper=NULL,
-                    applyintervals=TRUE,
+                    applyintervals=TRUE, updateintervals=FALSE, hstep=0.1,
                     applyconstraints=TRUE, dynlim=2, ablim=0, optim_iters=2,
                     Niters=c(100,100), NfinalMCMC=Niters[2], walltime = Inf,
                     CMAargs=list(control=list(maxit=Niters[1])),
@@ -32,8 +32,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     run_args = list(
       parm=parm, Data=Data, likefunc=likefunc, likefunctype=likefunctype,
       liketype=liketype, lower=lower, upper=upper, applyintervals=applyintervals,
-      applyconstraints=applyconstraints, dynlim=dynlim, ablim=ablim,
-      optim_iters=optim_iters, Niters=Niters, NfinalMCMC=NfinalMCMC,
+      updateintervals=updateintervals, applyconstraints=applyconstraints, dynlim=dynlim,
+      ablim=ablim, optim_iters=optim_iters, Niters=Niters, NfinalMCMC=NfinalMCMC,
       walltime=walltime, CMAargs=CMAargs, LDargs=LDargs, parm.names=parm.names,
       keepall=keepall, cores=1L
     )
@@ -197,7 +197,14 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }else{
     DataLD[['mon.names']] = "LP"
     if(is.null(DataLD[['parm.names']])){
-      DataLD[['parm.names']] = letters[1:length(parm)]
+      if(is.null(parm.names)){
+        DataLD[['parm.names']] = letters[1:length(parm)]
+      }else if(length(parm) == length(parm.names)){
+        DataLD[['parm.names']] = parm.names
+      }else{
+        message('parm.names does not match length of parm!')
+        DataLD[['parm.names']] = letters[1:length(parm)]
+      }
     }
     if(is.null(DataLD[['N']])){
       DataLD[['N']] = 1
@@ -260,6 +267,33 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
               return(NULL)
             }
           }
+        }
+      }
+
+      if(is.finite(CMA_out[['value']])){
+        if(updateintervals){
+          # create new limits based on CMA
+          hess = pracma::hessian(CMAfunc, x=CMA_out[['par']], h=hstep, Data=Data)
+          errors = sqrt(abs(diag(solve(hess))))
+
+          CMA_out$hess = hess
+          CMA_out$errors = errors
+
+          lower_old = lower
+          upper_old = upper
+
+          lower = pmax(lower, CMA_out[['par']] - 3*errors)
+          upper = pmin(upper, CMA_out[['par']] + 3*errors)
+
+          if(applyintervals){
+            Data[['intervals']]$lo = lower
+            Data[['intervals']]$hi = upper
+          }
+
+          out_print = rbind(round(CMA_out[['par']],2), round(errors,2), round(lower_old,2), round(lower,2), round(upper_old,2), round(upper,2))
+          colnames(out_print) = Data$parm.names
+          rownames(out_print) = c('Best', 'Error', 'Low_old', 'Low_new', 'High_old', 'High_new')
+          print(out_print)
         }
       }
 
