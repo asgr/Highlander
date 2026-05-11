@@ -45,13 +45,35 @@ mistakes can be posted as an Issue on GitHub asgr/Highlander.
 
 **Highlander** delegates MCMC sampling to the **LaplacesDemon** package, which provides dozens of algorithms (see `?LaplacesDemon::LaplacesDemon`). The default is CHARM (Componentwise Hit-And-Run Metropolis), which is a reliable general-purpose choice. Drawing on MCMC literature and the LaplacesDemon tutorial, the following guidelines can help when selecting an alternative via the `Algorithm` field of the `LDargs` argument:
 
+### Sampler Family Pros and Cons
+
+The table below summarises the key trade-offs between the major families of MCMC samplers available in **LaplacesDemon**, drawing on the comparative review of Bharti et al. (2025, arXiv:2512.17968) and the LaplacesDemon tutorial (Statisticat 2015).  Use it as a first filter before consulting the by-dimensionality guidance below.
+
+| Family | Representative algorithms | Gradient needed? | Strengths | Weaknesses |
+|--------|--------------------------|:----------------:|-----------|------------|
+| Random-walk MH | `RWM`, `MWG`, `AMWG`, `DRM`, `DRAM`, `RAM` | No | Conceptually simple; works with any likelihood; easy to diagnose | Proposal scale must be tuned; acceptance rate degrades rapidly with dimension; slow mixing for correlated parameters |
+| Adaptive covariance MH | `AM`, `AMM`, `INCA` | No | Learns posterior covariance automatically; robust to poor starting proposals | Requires a burn-in (adaptation) period; technically breaks detailed balance during adaptation (ergodicity restored asymptotically) |
+| Hit-and-run / CHARM | `CHARM`, `HARM`, `ADMG` | No | Mixes coordinate directions; more robust to correlations than axis-aligned MH; default in **Highlander** | Still shares RWM scaling limitations in very high dimensions |
+| Hamiltonian / Langevin | `HMC`, `AHMC`, `HMCDA`, `NUTS`, `MALA` | **Yes** | Excellent mixing; suppresses random-walk behaviour; scales to tens or hundreds of parameters | Requires a differentiable log-posterior and gradient implementation; expensive per-iteration cost; HMC needs tuning of step size and trajectory length |
+| Ensemble | `AIES`, `DEMC` | No | Affine invariant (scale-free); parallelisable; no proposal tuning; popular in astronomy | Requires many walkers ($\geq 2d$ recommended); less efficient in very high dimensions; can stall on multimodal posteriors |
+| Slice samplers | `Slice`, `AFSS`, `UESS`, `RSS`, `OHSS`, `ESS` | No | No tuning required; proposals always accepted; robust to awkward geometry | Many likelihood evaluations per sample; can be slow in high dimensions or with narrow slices |
+| Gibbs | `Gibbs`, `GG`, `AGG` | No | Exact sampling from full conditionals; very efficient when conditionals are tractable | Requires closed-form (or grid-evaluable) conditionals; slow mixing when parameters are strongly correlated |
+| Tempering / population | `MCMCMC`, `THMC`, `DEMC` | No | Escapes local modes; explores multimodal posteriors | Computationally expensive (multiple chains / evaluations); swapping between chains requires careful temperature schedule |
+| Stochastic gradient | `SGLD` | **Yes** | Scales to massive datasets via mini-batches; no MH step needed | **Not a final algorithm** — discretisation bias is not corrected; only appropriate for large-$N$ exploration, not for posterior inference |
+| Variable-dimension | `RJ` | No | Joint inference over model order and parameters | Complex to implement; acceptance rates hard to tune across dimensions |
+| Sequential / online | `SMWG`, `SAMWG`, `USMWG`, `USAMWG` | No | Designed for state-space and online updating problems | Specialised; not suited to static inference problems |
+
+**Key insight from Bharti et al. (2025):** The relative performance of samplers depends strongly on the problem structure. For smooth, unimodal posteriors, gradient-based methods (`NUTS`, `HMC`) are usually most efficient per effective sample.  For rough, multimodal, or non-differentiable posteriors, gradient-free adaptive methods (`AFSS`, `DEMC`, `AIES`) are safer choices.  Ensemble methods are particularly attractive when a natural parallel computing budget is available.
+
+### By Number of Parameters
+
 **4–8 parameters:** CHARM (default) performs well at low dimensions. NUTS (No-U-Turn Sampler) and HMCDA are very efficient when the log-posterior is differentiable and smooth. RAM (Robust Adaptive Metropolis) and Slice sampling are also strong choices, and the t-walk (twalk) requires no gradient information and is easy to apply. AIES also works well in this domain, and is popular in astronomy.
 
 **8–20 parameters:** Gradient-based samplers become increasingly valuable as dimension grows. NUTS and HMCDA are recommended when a differentiable log-posterior is available. DEMC (Differential Evolution Markov Chain) handles correlated parameters well in this range. AFSS (Automated Factor Slice Sampler) is the LaplacesDemon-recommended general-purpose algorithm and adapts automatically. CHARM remains viable but may converge more slowly than gradient-based alternatives. AIES also works well in this domain, and is popular in astronomy.
 
 **20–40 parameters:** NUTS continues to perform well when gradients are accessible. DEMC and AFSS (used with parameter blocks) are strong gradient-free options. AMWG (Adaptive Metropolis-within-Gibbs) with carefully selected blocks scales efficiently at this dimensionality. CHARM can still be used but is likely to mix slowly; blockwise versions such as AMM or AMWG are preferable.
 
-**40-100 parameters:** fitting will be getting very hard, especially if likelihoods are not auto-differentiable (if they are, then probably you should be using **Stan** or similar at this point). The best approach will take some user experimentation, but CHARM is often not a bad starting point.
+**40–100 parameters:** Fitting will be getting very hard, especially if likelihoods are not auto-differentiable (if they are, then probably you should be using **Stan** or similar at this point). The best approach will take some user experimentation, but CHARM is often not a bad starting point.
 
 To switch algorithm, pass `Algorithm` via `LDargs`:
 
@@ -1210,51 +1232,73 @@ The table below provides a quick reference for all available algorithms.
 "Gradient?" indicates whether the log-posterior gradient is needed.
 "Adaptive?" indicates built-in adaptation of the proposal.  "Parallel?"
 indicates whether the algorithm natively uses multiple chains.
+"Target AR" gives the theoretically optimal Metropolis–Hastings acceptance
+rate where applicable (N/A for Gibbs and slice samplers that have no
+acceptance step, and "Variable" for algorithms whose optimal rate depends on
+the proposal or problem).
+"Final?" indicates whether the algorithm is a **final algorithm** — i.e.,
+whether it asymptotically produces exact samples from the target posterior
+(Statisticat 2015).  The only algorithm in **LaplacesDemon** that is
+**not** a final algorithm is `SGLD`, because its Langevin discretisation
+introduces a bias that does not vanish at a fixed step size.
 
-| Algorithm | Full name | Gradient? | Adaptive? | Parallel? |
-|-----------|-----------|:---------:|:---------:|:---------:|
-| `ADMG`    | Adaptive Directional MWG | No | Yes | No |
-| `AGG`     | Adaptive Griddy-Gibbs | No | Yes | No |
-| `AHMC`    | Adaptive HMC | Yes | Yes | No |
-| `AIES`    | Affine-Invariant Ensemble Sampler | No | No | Yes |
-| `AFSS`    | Automated Factor Slice Sampler | No | Yes | No |
-| `AM`      | Adaptive Metropolis | No | Yes | No |
-| `AMM`     | Adaptive-Mixture Metropolis | No | Yes | No |
-| `AMWG`    | Adaptive MWG | No | Yes | No |
-| `CHARM`   | Componentwise Hit-And-Run MH | No | Optional | No |
-| `DEMC`    | Differential Evolution MC | No | No | Yes |
-| `DRAM`    | Delayed Rejection AM | No | Yes | No |
-| `DRM`     | Delayed Rejection MH | No | No | No |
-| `ESS`     | Elliptical Slice Sampler | No | No | No |
-| `GG`      | Griddy-Gibbs | No | No | No |
-| `Gibbs`   | Gibbs Sampler | No | No | No |
-| `HARM`    | Hit-And-Run MH | No | Optional | No |
-| `HMC`     | Hamiltonian MC | Yes | No | No |
-| `HMCDA`   | HMC with Dual-Averaging | Yes | Yes | No |
-| `IM`      | Independence Metropolis | No | No | No |
-| `INCA`    | Interchain Adaptation | No | Yes | Yes |
-| `MALA`    | Metropolis-Adjusted Langevin | Yes | Yes | No |
-| `MCMCMC`  | Metropolis-Coupled MC^3 | No | No | Yes |
-| `MTM`     | Multiple-Try MH | No | No | No |
-| `MWG`     | Metropolis-within-Gibbs | No | No | No |
-| `NUTS`    | No-U-Turn Sampler | Yes | Yes | No |
-| `OHSS`    | Oblique Hyperrectangle Slice | No | Yes | No |
-| `pCN`     | Preconditioned Crank-Nicolson | No | No | No |
-| `RAM`     | Robust Adaptive Metropolis | No | Yes | No |
-| `RDMH`    | Random Dive MH | No | No | No |
-| `Refractive` | Refractive Sampler | No | Yes | No |
-| `RJ`      | Reversible-Jump | No | No | No |
-| `RSS`     | Reflective Slice Sampler | No | No | No |
-| `RWM`     | Random-Walk Metropolis | No | No | No |
-| `SAMWG`   | Sequential Adaptive MWG | No | Yes | No |
-| `SGLD`    | Stochastic Gradient Langevin | Yes | No | No |
-| `Slice`   | Slice Sampler | No | No | No |
-| `SMWG`    | Sequential MWG | No | No | No |
-| `THMC`    | Tempered HMC | Yes | No | No |
-| `twalk`   | t-walk | No | No | No |
-| `UESS`    | Univariate Eigenvector Slice | No | Yes | No |
-| `USAMWG`  | Updating Sequential Adaptive MWG | No | Yes | No |
-| `USMWG`   | Updating Sequential MWG | No | No | No |
+| Algorithm | Full name | Gradient? | Adaptive? | Parallel? | Target AR | Final? |
+|-----------|-----------|:---------:|:---------:|:---------:|:---------:|:------:|
+| `ADMG`    | Adaptive Directional MWG | No | Yes | No | ~44% | Yes |
+| `AGG`     | Adaptive Griddy-Gibbs | No | Yes | No | N/A | Yes |
+| `AHMC`    | Adaptive HMC | Yes | Yes | No | ~65% | Yes |
+| `AIES`    | Affine-Invariant Ensemble Sampler | No | No | Yes | ~50% | Yes |
+| `AFSS`    | Automated Factor Slice Sampler | No | Yes | No | N/A | Yes |
+| `AM`      | Adaptive Metropolis | No | Yes | No | ~23.4% | Yes |
+| `AMM`     | Adaptive-Mixture Metropolis | No | Yes | No | ~23.4% | Yes |
+| `AMWG`    | Adaptive MWG | No | Yes | No | ~44% | Yes |
+| `CHARM`   | Componentwise Hit-And-Run MH | No | Optional | No | ~44% | Yes |
+| `DEMC`    | Differential Evolution MC | No | No | Yes | ~23.4% | Yes |
+| `DRAM`    | Delayed Rejection AM | No | Yes | No | ~23.4% | Yes |
+| `DRM`     | Delayed Rejection MH | No | No | No | ~44% | Yes |
+| `ESS`     | Elliptical Slice Sampler | No | No | No | N/A | Yes |
+| `GG`      | Griddy-Gibbs | No | No | No | N/A | Yes |
+| `Gibbs`   | Gibbs Sampler | No | No | No | N/A | Yes |
+| `HARM`    | Hit-And-Run MH | No | Optional | No | ~23.4% | Yes |
+| `HMC`     | Hamiltonian MC | Yes | No | No | ~65% | Yes |
+| `HMCDA`   | HMC with Dual-Averaging | Yes | Yes | No | ~65% | Yes |
+| `IM`      | Independence Metropolis | No | No | No | Variable | Yes |
+| `INCA`    | Interchain Adaptation | No | Yes | Yes | ~23.4% | Yes |
+| `MALA`    | Metropolis-Adjusted Langevin | Yes | Yes | No | ~57.4% | Yes |
+| `MCMCMC`  | Metropolis-Coupled MC^3 | No | No | Yes | Variable | Yes |
+| `MTM`     | Multiple-Try MH | No | No | No | Variable | Yes |
+| `MWG`     | Metropolis-within-Gibbs | No | No | No | ~44% | Yes |
+| `NUTS`    | No-U-Turn Sampler | Yes | Yes | No | ~65% | Yes |
+| `OHSS`    | Oblique Hyperrectangle Slice | No | Yes | No | N/A | Yes |
+| `pCN`     | Preconditioned Crank-Nicolson | No | No | No | Variable | Yes |
+| `RAM`     | Robust Adaptive Metropolis | No | Yes | No | User-spec | Yes |
+| `RDMH`    | Random Dive MH | No | No | No | ~44% | Yes |
+| `Refractive` | Refractive Sampler | No | Yes | No | Variable | Yes |
+| `RJ`      | Reversible-Jump | No | No | No | Variable | Yes |
+| `RSS`     | Reflective Slice Sampler | No | No | No | N/A | Yes |
+| `RWM`     | Random-Walk Metropolis | No | No | No | ~23.4% | Yes |
+| `SAMWG`   | Sequential Adaptive MWG | No | Yes | No | ~44% | Yes |
+| `SGLD`    | Stochastic Gradient Langevin | Yes | No | No | None | **No** |
+| `Slice`   | Slice Sampler | No | No | No | N/A | Yes |
+| `SMWG`    | Sequential MWG | No | No | No | ~44% | Yes |
+| `THMC`    | Tempered HMC | Yes | No | No | ~65% | Yes |
+| `twalk`   | t-walk | No | No | No | ~25% | Yes |
+| `UESS`    | Univariate Eigenvector Slice | No | Yes | No | N/A | Yes |
+| `USAMWG`  | Updating Sequential Adaptive MWG | No | Yes | No | ~44% | Yes |
+| `USMWG`   | Updating Sequential MWG | No | No | No | ~44% | Yes |
+
+**Notes on Target AR:**
+
+- **~23.4%** — the theoretically optimal acceptance rate for a $d$-dimensional Gaussian target under a random-walk Metropolis proposal (Roberts, Gelman & Gilks 1997).  Used as the default target for multivariate adaptive algorithms.
+- **~44%** — the optimal rate for a univariate (componentwise) MH step on a Gaussian target (Roberts & Rosenthal 2001).  Used as the default target for Gibbs-style componentwise algorithms.
+- **~57.4%** — the optimal rate for the Metropolis-Adjusted Langevin Algorithm on a Gaussian target (Roberts & Rosenthal 1998).
+- **~65%** — the recommended target acceptance rate for HMC and NUTS (Hoffman & Gelman 2014), ensuring a good balance between step-size efficiency and acceptance.
+- **~50%** — the commonly used target for ensemble/AIES samplers.
+- **~25%** — the typical acceptance rate observed for the t-walk algorithm.
+- **N/A** — Gibbs and slice samplers do not use a Metropolis–Hastings acceptance step; every proposal is accepted by construction.
+- **Variable** — the optimal rate depends on the proposal quality, problem geometry, or number of parallel chains, and has no single universal value.
+- **User-spec** (`RAM`) — the user specifies the target acceptance rate via `alpha.star` (default 0.234).
+- **None** (`SGLD`) — there is no acceptance step; the Langevin proposal is accepted unconditionally, which is why the algorithm is not exact at finite step size.
 
 ---
 
@@ -1312,6 +1356,11 @@ Algorithm". Technical Report, University of Toronto.
 
 Beskos, A., Roberts, G.O., Stuart, A.M., and Voss, J. (2008). "MCMC
 Methods for Diffusion Bridges". *Stoch. Dyn.*, 8, 319–350.
+
+Bharti, A., Briol, F.-X., Cockayne, J., Duncan, A., Gretton, A.,
+Hodgkinson, L., Knoblauch, J., Oates, C.J., Salimbeni, H., and Sherlock, C.
+(2025). "A Hitchhiker's Guide to Monte Carlo Sampling". arXiv:2512.17968.
+<https://arxiv.org/abs/2512.17968>
 
 Boyles, L.B. and Welling, M. (2012). "Refractive Sampling".
 
@@ -1409,6 +1458,22 @@ Statistics*, 23(2), 543–563.
 
 Vihola, M. (2011). "Robust Adaptive Metropolis Algorithm with Coerced
 Acceptance Rate". *Statistics and Computing*. Springer, Netherlands.
+
+Roberts, G.O., Gelman, A., and Gilks, W.R. (1997). "Weak Convergence and
+Optimal Scaling of Random Walk Metropolis Algorithms". *Annals of Applied
+Probability*, 7(1), 110–120.
+
+Roberts, G.O. and Rosenthal, J.S. (1998). "Optimal Scaling of Discrete
+Approximations to Langevin Diffusions". *Journal of the Royal Statistical
+Society: Series B*, 60(1), 255–268.
+
+Roberts, G.O. and Rosenthal, J.S. (2001). "Optimal Scaling for Various
+Metropolis-Hastings Algorithms". *Statistical Science*, 16(4), 351–367.
+
+Statisticat, LLC. (2015). *Bayesian Inference and the LaplacesDemon
+Package: MCMC*. (The bayesian-inference.com website is no longer live;
+this link points to the last Wayback Machine snapshot.)
+<https://web.archive.org/web/20150430054005/http://www.bayesian-inference.com/mcmc>
 
 Welling, M. and Teh, Y.W. (2011). "Bayesian Learning via Stochastic
 Gradient Langevin Dynamics". *Proceedings of the 28th International
