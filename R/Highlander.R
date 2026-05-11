@@ -1,11 +1,12 @@
 Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
                     Algorithm='CHARM', seed=666, lower=NULL, upper=NULL,
-                    applyintervals=TRUE, updateintervals=FALSE, hstep=0.1,
+                    applyintervals=TRUE, updateintervals=FALSE,
                     applyconstraints=TRUE, dynlim=2, ablim=0, optim_iters=2,
                     Niters=c(100,100), NfinalMCMC=Niters[2], walltime = Inf,
+                    Specs=Specs_help(Algorithm, Data),
                     CMAargs=list(control=list(maxit=Niters[1])),
                     LDargs=list(control=list(abstol=0.1), Iterations=Niters[2], Algorithm=Algorithm,
-                    Thinning=1, Specs=Specs_help(Algorithm, Data)), parm.names=NULL, keepall=FALSE, cores=1L
+                    Thinning=1, Specs=Specs), parm.names=NULL, keepall=FALSE, cores=1L
                     ){
 
   timestart = proc.time()[3] # start timer
@@ -273,7 +274,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       if(is.finite(CMA_out[['value']])){
         if(updateintervals){
           # create new limits based on CMA
-          hess = pracma::hessian(CMAfunc, x=CMA_out[['par']], h=hstep, Data=Data)
+          hess = numDeriv::hessian(CMAfunc, x=CMA_out[['par']], method.args=list(eps=(upper-lower)/100, d=1), Data=Data)
           errors = sqrt(abs(diag(solve(hess))))
 
           CMA_out$hess = hess
@@ -309,7 +310,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
         iteration = i
         message('CMA ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
       }else{
-        if(LP_out < -CMA_out[['value']]){
+        if(LP_out < -CMA_out[['value']]){ #this means new CMA is larger LP and preferred
           diff = abs(LP_out - -CMA_out[['value']])
           LP_out = -CMA_out[['value']]
           parm_out = CMA_out[['par']]
@@ -337,16 +338,16 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
         LD_all = c(LD_all, list(LD_out))
       }
 
-      if(LP_out < max(LD_out[['Monitor']][,1])){
-        diff = abs(LP_out - max(LD_out[['Monitor']][,1]))
-        LP_out = max(LD_out[['Monitor']][,1])
-        parm_out = LD_out$Posterior1[which.max(LD_out[['Monitor']][,1]),]
+      if(LP_out < max(LD_out[['Monitor']][,'LP'])){ #this means new LD_Monitor is larger LP and preferred
+        diff = abs(LP_out - max(LD_out[['Monitor']][,'LP']))
+        LP_out = max(LD_out[['Monitor']][,'LP'])
+        parm_out = LD_out$Posterior1[which.max(LD_out[['Monitor']][,'LP']),]
         best = 'LD_Mode'
         iteration = i
         message('LD Mode ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
       }
 
-      if(LP_out < LD_out$Summary1['LP','Median']){
+      if(LP_out < LD_out$Summary1['LP','Median']){ #this means new LD_Median is larger LP and preferred
         diff = abs(LP_out - LD_out$Summary1['LP','Median'])
         LP_out = LD_out$Summary1['LP','Median']
         parm_out = LD_out$Summary1[1:length(parm_out),'Median']
@@ -355,7 +356,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
         message('LD Median ',i,': ',round(LP_out,3), ' ', paste(round(parm_out,3),collapse = ' '))
       }
 
-      if(LP_out < LD_out$Summary1['LP','Mean']){
+      if(LP_out < LD_out$Summary1['LP','Mean']){ #this means new LD_Mean is larger LP and preferred
         diff = abs(LP_out - LD_out$Summary1['LP','Mean'])
         LP_out = LD_out$Summary1['LP','Mean']
         parm_out = LD_out$Summary1[1:length(parm_out),'Mean']

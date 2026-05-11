@@ -87,7 +87,7 @@ library(LaplacesDemon)
 Fit <- LaplacesDemon(
   Model,
   Data        = MyData,
-  Initial.Values = iv,
+  Initial.Values = Initial.Values,
   Iterations  = 10000,
   Thinning    = 10,
   Algorithm   = "CHARM",               # <-- select algorithm here
@@ -142,7 +142,7 @@ problems when no gradient information is available.  Requires careful
 tuning of $\Sigma$ for efficiency.
 
 ```{r rwm}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "RWM",
   Specs     = list(B = NULL))
 ```
@@ -166,7 +166,7 @@ available (e.g., from `LaplaceApproximation()`).  Poor mixing when $q$
 deviates substantially from $\pi$.
 
 ```{r im}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "IM",
   Specs     = list(mu = posterior_mode))
 ```
@@ -191,7 +191,7 @@ strongly correlated, high-dimensional posteriors because it cannot
 exploit inter-parameter correlations within a single proposal.
 
 ```{r mwg}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "MWG",
   Specs     = list(B = NULL))
 ```
@@ -213,7 +213,7 @@ towards 44%.
 | `Periodicity` | How often to adapt (iterations). |
 
 ```{r amwg}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "AMWG",
   Specs     = list(B = NULL, n = 0, Periodicity = 50))
 ```
@@ -241,7 +241,7 @@ Gaussian target (Gelman et al. 1996).
 | `Periodicity` | Adaptation frequency in iterations. |
 
 ```{r am}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "AM",
   Specs     = list(Adaptive = 500, Periodicity = 10))
 ```
@@ -266,7 +266,7 @@ maintain ergodicity while benefiting from adaptation
 | `w`           | Mixture weight for componentwise proposals (recommended: 0.05). |
 
 ```{r amm}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "AMM",
   Specs     = list(Adaptive = 500, B = NULL, n = 0,
                    Periodicity = 10, w = 0.05))
@@ -282,7 +282,7 @@ without violating detailed balance (Mira 2001).
 **Specs**  `DRM` requires no `Specs` (pass `NULL` or omit).
 
 ```{r drm}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "DRM",
   Specs     = NULL)
 ```
@@ -302,7 +302,7 @@ proposals trigger a second, smaller attempt (Haario et al. 2006).
 | `Periodicity` | Adaptation frequency. |
 
 ```{r dram}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "DRAM",
   Specs     = list(Adaptive = 500, Periodicity = 10))
 ```
@@ -332,7 +332,7 @@ RAM is guaranteed to converge under mild conditions.
 | `n`          | Previous iterations. |
 
 ```{r ram}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "RAM",
   Specs     = list(alpha.star = 0.234, B = NULL,
                    Dist = "N", gamma = 0.66, n = 0))
@@ -357,7 +357,7 @@ mixing than standard MH.
 | `Dyn.libs` | Dynamic libraries to load on each CPU (`NULL` if none). |
 
 ```{r mtm}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "MTM",
   Specs     = list(K        = 4,
                    CPUs     = 1,
@@ -377,7 +377,7 @@ positive.
 **Specs**  `RDMH` requires no `Specs` (pass `NULL` or omit).
 
 ```{r rdmh}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "RDMH",
   Specs     = NULL)
 ```
@@ -411,7 +411,7 @@ the scale $\sigma$ is tuned to approach that acceptance rate.
 | `alpha.star` | Optional target acceptance rate (recommended 0.44 for componentwise). Set to `NA` to disable adaptive scaling. |
 
 ```{r charm}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "CHARM",
   Specs     = list(alpha.star = NA))
 ```
@@ -432,7 +432,7 @@ the chosen direction.
 | `B`          | Optional list of blocks. |
 
 ```{r harm}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "HARM",
   Specs     = list(alpha.star = NA, B = NULL))
 ```
@@ -453,7 +453,7 @@ componentwise MH.
 | `Periodicity` | How often to adapt (iterations); defaults to `length(Initial.Values)`. |
 
 ```{r admg}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "ADMG",
   Specs     = list(n = 0, Periodicity = 1))
 ```
@@ -488,7 +488,7 @@ FC <- function(parm, Data) {
   return(parm)
 }
 
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "Gibbs",
   Specs     = list(FC = FC, MWG = NULL))
 ```
@@ -511,7 +511,7 @@ is exact up to the grid resolution and avoids Metropolis correction.
 | `Dyn.libs` | Character vector of dynamic libraries to load on each CPU (`NULL` if none). |
 
 ```{r gg}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "GG",
   Specs     = list(dparm    = NULL,
                    Grid     = seq(-0.1, 0.1, length.out = 5),
@@ -539,7 +539,7 @@ sampler.
 | `Dyn.libs` | Dynamic libraries to load on each CPU (`NULL` if none). |
 
 ```{r agg}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "AGG",
   Specs     = list(dparm    = NULL,
                    Grid     = seq(-0.1, 0.1, length.out = 5),
@@ -584,7 +584,7 @@ with $\beta = 2$.
 | `Dyn.libs` | Dynamic libraries to load on each CPU (`NULL` if none). |
 
 ```{r aies}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "AIES",
   Specs     = list(Nc       = 16,
                    Z        = NULL,
@@ -619,7 +619,7 @@ to a randomly-chosen history point.
 | `Z`     | Optional matrix/array of previous thinned samples. |
 
 ```{r demc}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "DEMC",
   Specs     = list(gamma = NULL, Nc = 3, w = 0.1, Z = NULL))
 ```
@@ -639,7 +639,7 @@ each chain, yielding faster mixing than independent AM chains.
 | `Periodicity` | Adaptation frequency. |
 
 ```{r inca}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "INCA",
   Specs     = list(Adaptive = 500, Periodicity = 10))
 ```
@@ -670,7 +670,7 @@ This helps the cold chain escape local modes.
 | `Dyn.libs` | Dynamic libraries to load on each CPU (`NULL` if none). |
 
 ```{r mcmcmc}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "MCMCMC",
   Specs     = list(lambda   = 1,
                    CPUs     = 2,
@@ -714,7 +714,7 @@ efficient per independent sample than gradient-free methods.
 | `m`       | Mass matrix ($d \times d$). |
 
 ```{r hmc}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "HMC",
   Specs     = list(epsilon = 0.1, L = 20, m = NULL))
 ```
@@ -735,7 +735,7 @@ parameters.
 | `Periodicity` | Adaptation frequency. |
 
 ```{r ahmc}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "AHMC",
   Specs     = list(epsilon = 0.1, L = 20, m = NULL, Periodicity = 10))
 ```
@@ -759,7 +759,7 @@ target.
 | `A`        | Number of adaptive burn-in iterations to discard after dual-averaging. |
 
 ```{r hmcda}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "HMCDA",
   Specs     = list(A       = 500,
                    delta   = 0.65,
@@ -785,7 +785,7 @@ NUTS is nearly parameter-free and often outperforms hand-tuned HMC.
 | `Lmax`    | Maximum tree depth (maximum leapfrog steps = $2^{\text{Lmax}}$). |
 
 ```{r nuts}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "NUTS",
   Specs     = list(A = 500, delta = 0.6,
                    epsilon = NULL, Lmax = 1000))
@@ -808,7 +808,7 @@ exploration of multimodal posteriors.
 | `Temperature` | Tempering value (> 1 increases exploration). |
 
 ```{r thmc}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "THMC",
   Specs     = list(epsilon = 0.1, L = 20, m = NULL, Temperature = 1))
 ```
@@ -838,7 +838,7 @@ optimal acceptance rate for MALA is approximately 57.4%.
 | `gamma`      | In $(1, \text{Iterations})$; controls adaptation decay (default 1). |
 
 ```{r mala}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "MALA",
   Specs     = list(A = Inf, alpha.star = 0.574,
                    delta = 1, epsilon = c(1e-6, 1e-7),
@@ -864,7 +864,7 @@ needed when $\epsilon_t \to 0$.
 | `size`    | Minibatch size (rows per iteration). |
 
 ```{r sgld}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "SGLD",
   Specs     = list(epsilon = 1e-4, file = "bigdata.csv",
                    Nc = 10, Nr = 1e6, size = 200))
@@ -891,7 +891,7 @@ suitable for large hierarchical models.
 | `beta` | Autoregressive parameter, $\beta \in (0,1)$. |
 
 ```{r pcn}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "pCN",
   Specs     = list(beta = 0.1))
 ```
@@ -924,7 +924,7 @@ and shrunk if necessary.
 | `w`      | Initial interval width (scalar or list per block). |
 
 ```{r slice}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "Slice",
   Specs     = list(B = NULL,
                    Bounds = c(-Inf, Inf),
@@ -952,7 +952,7 @@ high-dimensional problems.
 | `w` | Initial interval width. |
 
 ```{r afss}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "AFSS",
   Specs     = list(A = Inf, B = NULL, m = 100, n = 0, w = 1))
 ```
@@ -974,7 +974,7 @@ with the posterior geometry.
 | `n` | Number of previous iterations (for continuing a run). |
 
 ```{r uess}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "UESS",
   Specs     = list(A = Inf, B = NULL, m = 100, n = 0))
 ```
@@ -994,7 +994,7 @@ elongated or curved posteriors.
 | `w` | Step size (scalar or parameter-length vector). |
 
 ```{r rss}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "RSS",
   Specs     = list(m = 1, w = 1))
 ```
@@ -1013,7 +1013,7 @@ axis-aligned correlations.
 | `n` | Number of previous iterations (for continuing a run). |
 
 ```{r ohss}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "OHSS",
   Specs     = list(A = Inf, n = 0))
 ```
@@ -1033,7 +1033,7 @@ tuning is required.
 | `B` | Optional blocks. |
 
 ```{r ess}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "ESS",
   Specs     = list(B = NULL))
 ```
@@ -1061,7 +1061,7 @@ particularly effective for correlated posteriors.
 | `SIV` | Secondary initial values (must differ element-wise from `Initial.Values`). |
 
 ```{r twalk}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "twalk",
   Specs     = list(at = 6, aw = 1.5, n1 = 4, SIV = NULL))
 ```
@@ -1084,7 +1084,7 @@ proposals that preferentially explore high-density regions.
 | `r`        | Refractive index ratio $r_1/r_2$. |
 
 ```{r refractive}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "Refractive",
   Specs     = list(Adaptive = 1, m = 2, w = 0.1, r = 1.3))
 ```
@@ -1108,7 +1108,7 @@ binomial prior on model size.
 | `selected`   | Binary vector indicating initial selection state. |
 
 ```{r rj}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "RJ",
   Specs     = list(bin.n = d, bin.p = 0.5,
                    parm.p   = rep(0.5, d),
@@ -1138,7 +1138,7 @@ parameter values for each of $T$ time-periods.
 | `Dyn` | $T \times K_{\text{dyn}}$ matrix of dynamic parameter values. |
 
 ```{r smwg}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "SMWG",
   Specs     = list(Dyn = Dyn_matrix))
 ```
@@ -1156,7 +1156,7 @@ dynamic parameters.
 | `Periodicity` | Adaptation frequency. |
 
 ```{r samwg}
-Fit <- LaplacesDemon(Model, MyData, iv,
+Fit <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "SAMWG",
   Specs     = list(Dyn = Dyn_matrix, Periodicity = 50))
 ```
@@ -1176,7 +1176,7 @@ the time-periods from `Begin` onwards are re-sampled.
 | `Fit`   | Previous `demonoid` fit object. |
 
 ```{r usmwg}
-Fit_update <- LaplacesDemon(Model, MyData, iv,
+Fit_update <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "USMWG",
   Specs     = list(Begin = T_new, Dyn = Dyn_matrix, Fit = Fit_old))
 ```
@@ -1196,7 +1196,7 @@ online updating capability of USMWG.
 | `Periodicity` | Adaptation frequency. |
 
 ```{r usamwg}
-Fit_update <- LaplacesDemon(Model, MyData, iv,
+Fit_update <- LaplacesDemon(Model, MyData, Initial.Values,
   Algorithm = "USAMWG",
   Specs     = list(Begin = T_new, Dyn = Dyn_matrix,
                    Fit = Fit_old, Periodicity = 50))
