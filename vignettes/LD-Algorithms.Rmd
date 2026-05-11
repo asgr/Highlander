@@ -69,7 +69,7 @@ The table below summarises the key trade-offs between the major families of MCMC
 
 **4–8 parameters:** CHARM (default) performs well at low dimensions. NUTS (No-U-Turn Sampler) and HMCDA are very efficient when the log-posterior is differentiable and smooth. RAM (Robust Adaptive Metropolis) and Slice sampling are also strong choices, and the t-walk (twalk) requires no gradient information and is easy to apply. AIES also works well in this domain, and is popular in astronomy.
 
-**8–20 parameters:** Gradient-based samplers become increasingly valuable as dimension grows. NUTS and HMCDA are recommended when a differentiable log-posterior is available. DEMC (Differential Evolution Markov Chain) handles correlated parameters well in this range. AFSS (Automated Factor Slice Sampler) is the LaplacesDemon-recommended general-purpose algorithm and adapts automatically. CHARM remains viable but may converge more slowly than gradient-based alternatives. AIES also works well in this domain, and is popular in astronomy.
+**8–20 parameters:** Gradient-based samplers become increasingly valuable as dimension grows. NUTS and HMCDA are recommended when a differentiable log-posterior is available. DEMC (Differential Evolution Markov Chain) handles correlated parameters well in this range. AFSS (Automated Factor Slice Sampler) is the LaplacesDemon-recommended general-purpose algorithm and adapts automatically (but eigen-decomposition can be very slow). CHARM remains viable but may converge more slowly than gradient-based alternatives. AIES also works well in this domain, and is popular in astronomy. DRM and DRAM are also well behaved in this regime, and simple to specify (DRM has no parameters, and DRAM defaults are usually reasonable).
 
 **20–40 parameters:** NUTS continues to perform well when gradients are accessible. DEMC and AFSS (used with parameter blocks) are strong gradient-free options. AMWG (Adaptive Metropolis-within-Gibbs) with carefully selected blocks scales efficiently at this dimensionality. CHARM can still be used but is likely to mix slowly; blockwise versions such as AMM or AMWG are preferable.
 
@@ -147,7 +147,7 @@ Gaussian perturbation is added to the current state:
 
 $$
 \theta' = \theta^{(t)} + \epsilon, \qquad
-\epsilon \sim \mathcal{N}(0,\,\Sigma).
+\epsilon \sim \mathrm{N}(0,\,\Sigma).
 $$
 
 For well-tuned proposals the optimal acceptance rate is approximately
@@ -275,7 +275,7 @@ Fit <- LaplacesDemon(Model, MyData, Initial.Values,
 the componentwise proposal is used with probability $w$ and the
 adaptive multivariate proposal with probability $1-w$.  This helps
 maintain ergodicity while benefiting from adaptation
-(Roberts & Rosenthal 2009).
+(Roberts & Rosenthal 2009). AMM seems to work well for efficiently generating ESS per unit time, even if the total number of MCMC iterations seems higher on paper (aim for N parameters x1000 samples at least).
 
 **Specs**
 
@@ -392,7 +392,7 @@ Fit <- LaplacesDemon(Model, MyData, Initial.Values,
 **Description.**  A multiplicative random-walk sampler on $\mathbb{R}$,
 proposed by Dutta (2012).  The proposal is
 $\theta'_j = \theta_j \cdot \exp(\epsilon_j)$, $\epsilon_j \sim
-\mathcal{N}(0, \sigma^2)$.  This makes it scale-free and avoids the
+\mathrm{N}(0, \sigma^2)$.  This makes it scale-free and avoids the
 sign problem of additive proposals when parameters are constrained to be
 positive.
 
@@ -624,7 +624,7 @@ randomly-chosen other chains:
 
 $$
 \theta'_i = \theta_i^{(t)} + \gamma (\theta_r^{(t)} - \theta_s^{(t)}) + e,
-\quad e \sim \mathcal{N}(0, \epsilon I),
+\quad e \sim \mathrm{N}(0, \epsilon I),
 $$
 
 where $\gamma = 2.38/\sqrt{2d}$ by default.  A "snooker" update
@@ -842,7 +842,7 @@ Fit <- LaplacesDemon(Model, MyData, Initial.Values,
 $$
 \theta' = \theta^{(t)}
   + \frac{\epsilon^2}{2} \nabla\log\pi(\theta^{(t)}) + \epsilon\,\xi,
-\quad \xi \sim \mathcal{N}(0, I),
+\quad \xi \sim \mathrm{N}(0, I),
 $$
 
 followed by an MH correction.  Atchadé (2006) proposed an adaptive
@@ -899,7 +899,7 @@ infinite-dimensional targets.  The proposal is
 
 $$
 \theta' = \sqrt{1-\beta^2}\,\theta^{(t)} + \beta\,\xi,
-\quad \xi \sim \mathcal{N}(0, C),
+\quad \xi \sim \mathrm{N}(0, C),
 $$
 
 where $C$ is a prior covariance.  pCN is dimension-robust: its
@@ -961,7 +961,7 @@ Fit <- LaplacesDemon(Model, MyData, Initial.Values,
 orthogonal factor structure of the parameter space to align the slice
 with the principal axes of the posterior.  This greatly reduces the
 number of steps needed to create the slice in correlated,
-high-dimensional problems.
+high-dimensional problems. Eigen-decomposition can be very slow for complex problems though.
 
 **Specs**
 

@@ -139,12 +139,15 @@ library(lhs)
 lower = c(-4,-2,-1,-0.5,-2.5,-2.5,0,0)
 upper = c(3,1,1,1,1.5,1,4,4) # initial range for parameters
 
+Data$fit='CMA' # switch it to CMA mode.
+
 # Note for Lowlander the only output from our likelihood function has to be LL of ChiSq:
 intervals = Lowlander(lower, upper, Data=Data, likefunc=ProSpectSEDlike)
 
 intervals$vol_red #the volume reduction factor, which is how much less hyper-space we wille explore.
 lower = intervals$lower
 upper = intervals$upper
+
 Data$fit = 'LD' # now we can switch it to full LD mode.
 ```
 

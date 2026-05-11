@@ -283,12 +283,12 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
           lower_old = lower
           upper_old = upper
 
-          lower = pmax(lower, CMA_out[['par']] - 3*errors)
-          upper = pmin(upper, CMA_out[['par']] + 3*errors)
+          lower = pmax(lower, CMA_out[['par']] - 5*errors)
+          upper = pmin(upper, CMA_out[['par']] + 5*errors)
 
           if(applyintervals){
-            Data[['intervals']]$lo = lower
-            Data[['intervals']]$hi = upper
+            DataLD[['intervals']]$lo = lower
+            DataLD[['intervals']]$hi = upper
           }
 
           out_print = rbind(round(CMA_out[['par']],2), round(errors,2), round(lower_old,2), round(lower,2), round(upper_old,2), round(upper,2))
