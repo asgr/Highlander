@@ -4,3 +4,4 @@ import("LaplacesDemon")
 import("cmaeshpc")
 
 importFrom("stats", "quantile", "cor", "pnorm")
+importFrom("numDeriv", "hessian")

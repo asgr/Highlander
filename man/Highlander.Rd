@@ -10,12 +10,12 @@ There Can be Only One! Finds the highest points in log-likelihood space by switc
 \usage{
 Highlander(parm = NULL, Data, likefunc, likefunctype = NULL, liketype = NULL,
   Algorithm = "CHARM", seed = 666, lower = NULL, upper = NULL,
-  applyintervals = TRUE, applyconstraints = TRUE,
-  dynlim = 2, ablim = 0, optim_iters = 2,
-  Niters = c(100,100), NfinalMCMC = Niters[2], walltime = Inf,
+  applyintervals = TRUE, updateintervals = FALSE, applyconstraints = TRUE,
+  dynlim = 2, ablim = 0, optim_iters = 2, Niters = c(100,100), NfinalMCMC = Niters[2],
+  walltime = Inf, Specs = Specs_help(Algorithm, Data),
   CMAargs = list(control=list(maxit=Niters[1])),
   LDargs = list(control = list(abstol = 0.1), Iterations = Niters[2],
-    Algorithm = Algorithm, Thinning = 1, Specs = Specs_help(Algorithm, Data)),
+    Algorithm = Algorithm, Thinning = 1, Specs = Specs),
   parm.names = NULL, keepall = FALSE, cores = 1L
   )
 }
@@ -57,6 +57,9 @@ Numeric vector; upper limit allowed for \option{parm}; if \option{upper} = NULL 
   \item{applyintervals}{
 Logical; should the lower and upper intervals be applied by \code{Highlander} directly? This means it will create the list items Data$intervals$lo = lower and Data$intervals$hi = upper. You might want to set this to FALSE when your likelihood function deals with intervals itself using a different structure to the Data$intervals and creating such structures will break functionality inside \option{likefunc} (e.g. this is the case when running with \code{ProFit}).
 }
+  \item{updateintervals}{
+Logical; can intervals be updated based on results of computing the Hessian after each CMA fit? You might never want the \option{lower} and \option{upper} intervals (and the related intervals structure inside \option{data}) to be modified, in which case leave as the default of FALSE. If you do want to update then the marginalised standard deviation is computed from the Hessian matrix, and x3 each value become the new limit if it sits inside the old limit (otherwise the old limit is used instead). When this is TRUE, a matrix of relevant update metrics is printed to screen so users can check it is behaving reasonably.
+}
   \item{applyconstraints}{
 Logical; should constraints be applied by \code{Highlander} directly? This means it will pass the current \option{parm} through Data$contraints. You might want to set this to FALSE when your likelihood function deals with constraints itself and applying such structures will break functionality inside \option{likefunc} (e.g. this is the case when running with \code{ProFit}).
 }
@@ -78,11 +81,14 @@ Integer scalar; number of iterations to run for the final MCMC run. You might wa
   \item{walltime}{
 Numeric scalar; the maximum allowed CPU time for \code{Highlander} in minutes. The function will stop with the best solution to date once the walltime has been exceeded (although it does not stop mid CMA or MCMC, so the \option{walltime} will usually be exceeded a bit).
 }
+  \item{Specs}{
+List; \option{Specs} to be passed into \option{LDargs} as a convenience. \option{Specs} is by default populated with the settings obtained from \code{\link{Specs_help}}, if non-defaults are desired then extra arguments can be passed into \code{\link{Specs_help}} via \dots or a fully user-defined list can be constructed obeying the requirements of \code{\link[LaplacesDemon]{LaplacesDemon}} for the \option{Algorithm} being used.
+}
   \item{CMAargs}{
 List; arguments to be passed into \code{\link[cmaeshpc]{cmaeshpc}}.
 }
   \item{LDargs}{
-List; arguments to be passed into \code{\link[LaplacesDemon]{LaplacesDemon}}. Note that \option{Algorithm} is passed into the args by default. \option{Specs} is by default populated with the defaults obtained from \code{\link{Specs_help}}, if non-defaults are desired then the entirety of \option{LDargs} must be written and either extra arguments passed into \code{\link{Specs_help}} via \dots or a user defined list is passed explicitly (see \code{\link[LaplacesDemon]{LaplacesDemon}}).
+List; arguments to be passed into \code{\link[LaplacesDemon]{LaplacesDemon}}. Note that \option{Algorithm} and \option{Specs} are passed into the \option{LDargs} by default.
 }
   \item{parm.names}{
 Character vector; optional vector of parameter names. This will over-write the current names in \option{parm} if these also exist. If provided it ensures the \option{parm} and \option{CMA_last$par} outputs are named.

@@ -131,7 +131,7 @@ Data = list(flux=flux_input,
   )
 ```
 
-Now we are going to use **Lowlander** to find reasonble paramter limits for our fitting:
+Now we are going to use **Lowlander** to find reasonable parameter limits for our fitting:
 
 ```{r}
 library(lhs)
