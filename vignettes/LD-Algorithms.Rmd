@@ -1471,7 +1471,8 @@ Roberts, G.O. and Rosenthal, J.S. (2001). "Optimal Scaling for Various
 Metropolis-Hastings Algorithms". *Statistical Science*, 16(4), 351–367.
 
 Statisticat, LLC. (2015). *Bayesian Inference and the LaplacesDemon
-Package: MCMC*.
+Package: MCMC*. (The bayesian-inference.com website is no longer live;
+this link points to the last Wayback Machine snapshot.)
 <https://web.archive.org/web/20150430054005/http://www.bayesian-inference.com/mcmc>
 
 Welling, M. and Teh, Y.W. (2011). "Bayesian Learning via Stochastic
