@@ -15,7 +15,7 @@ Highlander(parm = NULL, Data, likefunc, likefunctype = NULL, liketype = NULL,
   walltime = Inf, Specs = Specs_help(Algorithm, Data),
   CMAargs = list(control=list(maxit=Niters[1])),
   LDargs = list(control = list(abstol = 0.1), Iterations = Niters[2],
-    Algorithm = Algorithm, Thinning = 1, Specs = Specs_help(Algorithm, Data)),
+    Algorithm = Algorithm, Thinning = 1, Specs = Specs),
   parm.names = NULL, keepall = FALSE, cores = 1L
   )
 }
