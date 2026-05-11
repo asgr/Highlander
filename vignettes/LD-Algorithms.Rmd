@@ -51,7 +51,7 @@ The table below summarises the key trade-offs between the major families of MCMC
 
 | Family | Representative algorithms | Gradient needed? | Strengths | Weaknesses |
 |--------|--------------------------|:----------------:|-----------|------------|
-| Random-walk MH | `RWM`, `MWG`, `AMWG`, `DRM`, `DRAM`, `RAM` | No | Conceptually simple; works with any likelihood; easy to diagnose | Proposal scale must be tuned; acceptance rate degrades rapidly with dimension; slow mixing for correlated parameters |
+| Random-walk MH | `RWM`, `MWG`, `AMWG`, `DRM`, `DRAM`, `RAM`, `pCN` | No | Conceptually simple; works with any likelihood; easy to diagnose | Proposal scale must be tuned; acceptance rate degrades rapidly with dimension; slow mixing for correlated parameters |
 | Adaptive covariance MH | `AM`, `AMM`, `INCA` | No | Learns posterior covariance automatically; robust to poor starting proposals | Requires a burn-in (adaptation) period; technically breaks detailed balance during adaptation (ergodicity restored asymptotically) |
 | Hit-and-run / CHARM | `CHARM`, `HARM`, `ADMG` | No | Mixes coordinate directions; more robust to correlations than axis-aligned MH; default in **Highlander** | Still shares RWM scaling limitations in very high dimensions |
 | Hamiltonian / Langevin | `HMC`, `AHMC`, `HMCDA`, `NUTS`, `MALA` | **Yes** | Excellent mixing; suppresses random-walk behaviour; scales to tens or hundreds of parameters | Requires a differentiable log-posterior and gradient implementation; expensive per-iteration cost; HMC needs tuning of step size and trajectory length |
@@ -705,7 +705,7 @@ Fit <- LaplacesDemon(Model, MyData, iv,
 # Hamiltonian / Langevin Algorithms
 
 Hamiltonian Monte Carlo (HMC) (Duane et al. 1987; Neal 2011) augments $\theta$
-with an auxiliary momentum $p \sim \mathcal{N}(0, M)$ and simulates
+with an auxiliary momentum $p \sim \mathrm{N}(0, M)$ and simulates
 Hamiltonian dynamics
 
 $$
