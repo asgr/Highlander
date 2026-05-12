@@ -224,15 +224,16 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   # Data[[jitter]] by sqrt(sigma^2 + exp(log_jitter)^2), producing the correct
   # additive-variance jitter term without modifying likefunc itself.
   if (!is.null(jitter)) {
-    if (!is.character(jitter) || length(jitter) != 1L) {
-      stop("'jitter' must be NULL or a single character string naming the sigma field in Data.")
+    if (!is.character(jitter)) {
+      stop("'jitter' must be NULL or a character vector naming the sigma field path in Data.")
     }
-    if (is.null(Data[[jitter]])) {
+    Data_jitter = Reduce('[[', jitter, Data)
+    if (is.null(Data_jitter)) {
       stop(paste0("'Data$", jitter, "' not found. 'jitter' must name a field in Data ",
                   "containing per-observation sigma (error) values."))
     }
     if (is.null(jitter_init)) {
-      jitter_init = log(pmax(median(abs(Data[[jitter]]), na.rm = TRUE), exp(jitter_lower)))
+      jitter_init = pmax(log(median(abs(Data_jitter), na.rm = TRUE)), jitter_lower)
     }
 
     # Append log_jitter to parm and update bounds (CMA uses explicit lower/upper).
@@ -257,8 +258,9 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     CMAfunc = function(parm, Data, ...) {
       log_jitter_val = parm[length(parm)]
       parm = parm[-length(parm)]
-      s = exp(log_jitter_val)
-      Data[[.jitter_field]] = sqrt(Data[[.jitter_field]]^2 + s^2)
+      sig_add = exp(log_jitter_val)
+      Data = .set_by_path(Data, .jitter_field, sqrt(Data_jitter^2 + sig_add^2))
+      #Data[[.jitter_field]] = sqrt(Data[[.jitter_field]]^2 + sig_add^2)
       .inner_CMAfunc(parm, Data, ...)
     }
 
@@ -267,10 +269,13 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     LDfunc = function(parm, Data, ...) {
       log_jitter_val = parm[length(parm)]
       parm = parm[-length(parm)]
-      s = exp(log_jitter_val)
-      Data[[.jitter_field]] = sqrt(Data[[.jitter_field]]^2 + s^2)
+      Data$parm.names = Data$parm.names[-length(parm)]
+      sig_add = exp(log_jitter_val)
+      Data = .set_by_path(Data, .jitter_field, sqrt(Data_jitter^2 + sig_add^2))
+      #Data[[.jitter_field]] = sqrt(Data[[.jitter_field]]^2 + sig_add^2)
       result = .inner_LDfunc(parm, Data, ...)
       result$parm = c(result$parm, log_jitter_val)
+      Data$parm.names = c(Data$parm.names, 'log_jitter')
       result
     }
   }
@@ -312,7 +317,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
         CMA_out = tempsafe
         if(is.null(CMA_out[['par']])){ #Catch bad initial starting positions and jitter
           tempsafe = try(
-            do.call('cmaeshpc', c(list(par=jitter(parm_out), fn=CMAfunc, Data=quote(DataCMA), lower=lower,
+            do.call('cmaeshpc', c(list(par=stats::jitter(parm_out), fn=CMAfunc, Data=quote(DataCMA), lower=lower,
                                        upper=upper), CMAargs))
           )
           if(inherits(tempsafe, "try-error")){
@@ -565,4 +570,13 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
   # We add the expected LP back to the front of Monitor output
   return(list(LP=fnscale*output$LP, Dev=fnscale*output$Dev, Monitor=Monitor, yhat=output$yhat, parm=parm))
+}
+
+.set_by_path = function(x, path, value) {
+  if (length(path) == 1) {
+    x[[path]] = value
+    return(x)
+  }
+  x[[path[1]]] = .set_by_path(x[[path[1]]], path[-1], value)
+  x
 }
