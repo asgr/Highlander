@@ -6,7 +6,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
                     Specs=Specs_help(Algorithm, Data),
                     CMAargs=list(control=list(maxit=Niters[1])),
                     LDargs=list(control=list(abstol=0.1), Iterations=Niters[2], Algorithm=Algorithm,
-                    Thinning=1, Specs=Specs), parm.names=NULL, keepall=FALSE, cores=1L
+                    Thinning=1, Specs=Specs), parm.names=NULL, keepall=FALSE, cores=1L,
+                    jitter=NULL, jitter_init=NULL, jitter_lower=-30, jitter_upper=5
                     ){
 
   timestart = proc.time()[3] # start timer
@@ -36,7 +37,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       updateintervals=updateintervals, applyconstraints=applyconstraints, dynlim=dynlim,
       ablim=ablim, optim_iters=optim_iters, Niters=Niters, NfinalMCMC=NfinalMCMC,
       walltime=walltime, CMAargs=CMAargs, LDargs=LDargs, parm.names=parm.names,
-      keepall=keepall, cores=1L
+      keepall=keepall, cores=1L,
+      jitter=jitter, jitter_init=jitter_init, jitter_lower=jitter_lower, jitter_upper=jitter_upper
     )
 
     if(.Platform$OS.type == "windows"){
@@ -215,6 +217,64 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     }
   }
 
+  # Set up jitter parameter if requested.
+  # When jitter is not NULL it names the field in Data containing per-observation
+  # sigma values. An extra parameter log_jitter is appended to parm so that both
+  # CMA and LD jointly optimise it. Before each likefunc call the wrapper inflates
+  # Data[[jitter]] by sqrt(sigma^2 + exp(log_jitter)^2), producing the correct
+  # additive-variance jitter term without modifying likefunc itself.
+  if (!is.null(jitter)) {
+    if (!is.character(jitter) || length(jitter) != 1L) {
+      stop("'jitter' must be NULL or a single character string naming the sigma field in Data.")
+    }
+    if (is.null(Data[[jitter]])) {
+      stop(paste0("'Data$", jitter, "' not found. 'jitter' must name a field in Data ",
+                  "containing per-observation sigma (error) values."))
+    }
+    if (is.null(jitter_init)) {
+      jitter_init = log(median(abs(Data[[jitter]]), na.rm = TRUE))
+    }
+
+    # Append log_jitter to parm and update bounds (CMA uses explicit lower/upper).
+    # DataLD$intervals is intentionally left at N_orig length so the inner wrapper
+    # functions clip only the original parameters.
+    parm = c(parm, jitter_init)
+    names(parm)[length(parm)] = 'log_jitter'
+    if (!is.null(parm.names)) {
+      parm.names = c(parm.names, 'log_jitter')
+    }
+    lower = c(lower, jitter_lower)
+    upper = c(upper, jitter_upper)
+
+    # Update DataLD parm.names to include log_jitter
+    DataLD[['parm.names']] = c(DataLD[['parm.names']], 'log_jitter')
+
+    # Capture sigma field name in closures
+    .jitter_field = jitter
+
+    # Wrap CMAfunc: strip log_jitter, inflate sigma, call inner, return scalar
+    .inner_CMAfunc = CMAfunc
+    CMAfunc = function(parm, Data, ...) {
+      log_jitter_val = parm[length(parm)]
+      parm = parm[-length(parm)]
+      s = exp(log_jitter_val)
+      Data[[.jitter_field]] = sqrt(Data[[.jitter_field]]^2 + s^2)
+      .inner_CMAfunc(parm, Data, ...)
+    }
+
+    # Wrap LDfunc: strip log_jitter, inflate sigma, call inner, restore log_jitter to parm
+    .inner_LDfunc = LDfunc
+    LDfunc = function(parm, Data, ...) {
+      log_jitter_val = parm[length(parm)]
+      parm = parm[-length(parm)]
+      s = exp(log_jitter_val)
+      Data[[.jitter_field]] = sqrt(Data[[.jitter_field]]^2 + s^2)
+      result = .inner_LDfunc(parm, Data, ...)
+      result$parm = c(result$parm, log_jitter_val)
+      result
+    }
+  }
+
   parm_out = parm
 
   CMA_out = NULL
@@ -287,12 +347,21 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
           upper = pmin(upper, CMA_out[['par']] + 5*errors)
 
           if(applyintervals){
-            DataLD[['intervals']]$lo = lower
-            DataLD[['intervals']]$hi = upper
+            # When jitter is active, DataLD$intervals must stay at N_orig length so
+            # the inner wrapper functions can clip original parameters without a
+            # dimension mismatch.  Jitter bounds are kept only in lower/upper (CMA).
+            if (!is.null(jitter)) {
+              n_orig = length(lower) - 1L
+              DataLD[['intervals']]$lo = lower[seq_len(n_orig)]
+              DataLD[['intervals']]$hi = upper[seq_len(n_orig)]
+            } else {
+              DataLD[['intervals']]$lo = lower
+              DataLD[['intervals']]$hi = upper
+            }
           }
 
           out_print = rbind(round(CMA_out[['par']],2), round(errors,2), round(lower_old,2), round(lower,2), round(upper_old,2), round(upper,2))
-          colnames(out_print) = Data$parm.names
+          colnames(out_print) = parm.names
           rownames(out_print) = c('Best', 'Error', 'Low_old', 'Low_new', 'High_old', 'High_new')
           print(out_print)
         }
@@ -378,12 +447,23 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   # LD_last: Last LD output
 
   if(applyconstraints & !is.null(Data[['constraints']])){
-    parm_out = Data[['constraints']](parm_out)
+    if (!is.null(jitter)) {
+      # User constraints do not know about log_jitter; apply only to original params
+      log_jitter_end = parm_out[length(parm_out)]
+      parm_out = c(Data[['constraints']](parm_out[-length(parm_out)]), log_jitter_end)
+    } else {
+      parm_out = Data[['constraints']](parm_out)
+    }
   }
 
   if(applyintervals & !is.null(Data[['intervals']])){
-    parm_out[parm_out < Data[['intervals']]$lo] = Data[['intervals']]$lo[parm_out < Data[['intervals']]$lo]
-    parm_out[parm_out > Data[['intervals']]$hi] = Data[['intervals']]$hi[parm_out > Data[['intervals']]$hi]
+    # Data$intervals has N_orig elements; clip only those to avoid dimension mismatch
+    # when jitter has been appended to parm_out.
+    n_clip = length(Data[['intervals']]$lo)
+    parm_clip = parm_out[seq_len(n_clip)]
+    parm_clip[parm_clip < Data[['intervals']]$lo] = Data[['intervals']]$lo[parm_clip < Data[['intervals']]$lo]
+    parm_clip[parm_clip > Data[['intervals']]$hi] = Data[['intervals']]$hi[parm_clip > Data[['intervals']]$hi]
+    parm_out[seq_len(n_clip)] = parm_clip
   }
 
   RedChi2 = LP_out/(-1.418939 * DataLD[['N']])
