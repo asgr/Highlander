@@ -232,7 +232,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
                   "containing per-observation sigma (error) values."))
     }
     if (is.null(jitter_init)) {
-      jitter_init = log(median(abs(Data[[jitter]]), na.rm = TRUE))
+      jitter_init = log(pmax(median(abs(Data[[jitter]]), na.rm = TRUE), exp(jitter_lower)))
     }
 
     # Append log_jitter to parm and update bounds (CMA uses explicit lower/upper).
