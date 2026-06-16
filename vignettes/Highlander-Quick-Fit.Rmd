@@ -15,6 +15,7 @@ vignette: |
 Load the libraries we will need:
 
 ```{r}
+library(ParmOff)
 library(ProSpect)
 library(Highlander)
 library(foreach)
