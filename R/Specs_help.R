@@ -28,8 +28,8 @@ Specs_help = function(Algorithm = 'CHARM', Data = NULL, ...) {
 
   } else if (Algorithm == 'AIES') {
     # Affine-Invariant Ensemble Sampler (Specs required – no default)
-    if(is.null(Data)){
-      message('AIES requires user-supplied Nc or Data. Returning template.')
+    if(is.null(Data$parm.names)){
+      message('AIES requires user-supplied Nc or Data. Returning template default Nc = 3.')
       Nc = 3
     }else{
       Nc = 2*length(Data$parm.names)
