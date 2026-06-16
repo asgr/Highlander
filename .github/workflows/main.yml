@@ -53,6 +53,7 @@ jobs:
             any::knitr,
             any::rmarkdown,
             any::lhs
+            any::ParmOff
 
       - uses: r-lib/actions/check-r-package@v2
         with:
