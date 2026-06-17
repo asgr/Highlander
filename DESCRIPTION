@@ -11,7 +11,7 @@ Imports: LaplacesDemon, cmaeshpc, parallel, numDeriv
 Suggests: knitr, magicaxis, ProSpect, celestial, foreach, rmarkdown, lhs, parmoff
 Remotes:
   asgr/cmaeshpc,
-  asgr/LaplacesDemon
+  asgr/LaplacesDemon,
   asgr/ParmOff
 Encoding: UTF-8
 LazyData: true
