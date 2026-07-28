@@ -413,10 +413,11 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }else if(liketype=='max'){
     fnscale = -1
   }
+  V = fnscale*output # value to be minimised (higher LP => lower V)
   if(!is.null(prior)){
-    output = output - fnscale*prior(parm, Data)
+    V = V - prior(parm, Data)
   }
-  return(fnscale*output)
+  return(V)
 }
 
 .convert_CMA2LD=function(parm, Data, likefunc, liketype='min', prior=NULL){
@@ -450,11 +451,11 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }else if(liketype=='max'){
     fnscale = -1
   }
-  LP = output$LP
+  V = fnscale*output$LP # value to be minimised (higher LP => lower V)
   if(!is.null(prior)){
-    LP = LP - fnscale*prior(parm, Data)
+    V = V - prior(parm, Data)
   }
-  return(fnscale*LP)
+  return(V)
 }
 
 .convert_LD2LD=function(parm, Data, likefunc, liketype='min', prior=NULL){
