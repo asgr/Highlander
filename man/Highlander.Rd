@@ -9,7 +9,7 @@ There Can be Only One! Finds the highest points in log-likelihood space by switc
 }
 \usage{
 Highlander(parm = NULL, Data, likefunc, likefunctype = NULL, liketype = NULL,
-  Algorithm = "CHARM", seed = 666, lower = NULL, upper = NULL,
+  prior = NULL, Algorithm = "CHARM", seed = 666, lower = NULL, upper = NULL,
   applyintervals = TRUE, updateintervals = FALSE, applyconstraints = TRUE,
   dynlim = 2, ablim = 0, optim_iters = 2, Niters = c(100,100), NfinalMCMC = Niters[2],
   walltime = Inf, Specs = Specs_help(Algorithm, Data),
@@ -35,6 +35,9 @@ Character scalar; if \option{likefunc} outputs just the \code{abs(LP)} then 'CMA
 }
   \item{liketype}{
 Character scalar; is the likelihood output by \option{likefunc} defined in a way that means we want to minimise ('min'; Chi^2 type) or maximise ('max'; log-likelihood type) the function? If left as NULL the default assumes the standard minimisation setup of CMA (so 'min'), and maximisation setup of LD (so 'max').
+}
+  \item{prior}{
+Function; optional generic interface for adding a prior. If provided, it must take arguments \option{parm} and \option{Data} (in that order, matching the interface of \option{likefunc}) and return a numeric scalar equal to the log-likelihood (i.e. log-density) of the prior evaluated at \option{parm}. This value is added directly to the log-posterior (LP) computed from \option{likefunc}, correctly propagated through both the CMA (where it appropriately modifies the minimised/maximised scalar) and LD (where it is added to \code{LP}, and consistently offsets \code{Dev}) stages, so the reported \option{LP} in the output (and used to pick the \option{best} solution) is always \code{likefunc} log-likelihood + \option{prior} log-density. If left as the default of NULL then no prior contribution is added (equivalent to a flat/uninformative prior), which reproduces previous \code{Highlander} behaviour exactly.
 }
   \item{Algorithm}{
 Character scalar; the short algorithm name recognised by
@@ -160,6 +163,19 @@ highfit = Highlander(parm=c(-1,2), Data=mock, likefunc=likefunc, liketype='max',
 highfit$CMA_last$par
 
 highfit$LD_last$Summary1
+
+# We can also add a generic prior. The prior function takes parm (and Data) and must
+# return the scalar log-likelihood of the prior, which Highlander adds to the LP
+# computed from likefunc (correctly propagated through both the CMA and LD stages):
+
+priorfunc = function(parm, Data){
+ dnorm(parm[1], mean=0, sd=10, log=TRUE) + dunif(parm[2], min=1, max=1e3, log=TRUE)
+}
+
+highfit_prior = Highlander(parm=c(-1,2), Data=mock, likefunc=likefunc, liketype='max',
+  prior=priorfunc, lower=c(-1e3,1), upper=c(1e3,1e3), parm.names=c('Mean', 'SD'))
+
+highfit_prior$parm
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

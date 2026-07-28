@@ -1,5 +1,5 @@
 Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
-                    Algorithm='CHARM', seed=666, lower=NULL, upper=NULL,
+                    prior=NULL, Algorithm='CHARM', seed=666, lower=NULL, upper=NULL,
                     applyintervals=TRUE, updateintervals=FALSE,
                     applyconstraints=TRUE, dynlim=2, ablim=0, optim_iters=2,
                     Niters=c(100,100), NfinalMCMC=Niters[2], walltime = Inf,
@@ -32,7 +32,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
 
     run_args = list(
       parm=parm, Data=Data, likefunc=likefunc, likefunctype=likefunctype,
-      liketype=liketype, lower=lower, upper=upper, applyintervals=applyintervals,
+      liketype=liketype, prior=prior, lower=lower, upper=upper, applyintervals=applyintervals,
       updateintervals=updateintervals, applyconstraints=applyconstraints, dynlim=dynlim,
       ablim=ablim, optim_iters=optim_iters, Niters=Niters, NfinalMCMC=NfinalMCMC,
       walltime=walltime, CMAargs=CMAargs, LDargs=LDargs, parm.names=parm.names,
@@ -89,6 +89,9 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   # Data: usual data; input to likefunc
   # likefunc: likelihood function that takes in parm and Data as arguments; can output CMA scalar of LD list outputs
   # likefunctype: if likefunc outputs just the abs(LP) then 'CMA', if the list for LD then 'LD'
+  # prior: optional function that takes parm (and Data) as arguments and returns the scalar
+  #        log-likelihood of the prior, which is added to the log-posterior (LP) computed
+  #        from likefunc, correctly propagated through both the CMA and LD stages
   # seed: random seed to start with
   # lower: lower limit vector
   # upper: upper limit vector
@@ -167,13 +170,13 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   DataCMA = Data
 
   if(likefunctype == 'CMA'){
-    CMAfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
-      .convert_CMA2CMA(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
+    CMAfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype, inprior=prior){
+      .convert_CMA2CMA(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype, prior=inprior)
     }
   }else{
     DataCMA[['mon.names']] = ''
-    CMAfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
-      .convert_LD2CMA(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
+    CMAfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype, inprior=prior){
+      .convert_LD2CMA(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype, prior=inprior)
     }
   }
 
@@ -192,8 +195,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     if(is.null(DataLD[['N']])){
       DataLD[['N']] = 1
     }
-    LDfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
-      .convert_LD2LD(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
+    LDfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype, inprior=prior){
+      .convert_LD2LD(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype, prior=inprior)
     }
   }else{
     DataLD[['mon.names']] = "LP"
@@ -210,8 +213,8 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     if(is.null(DataLD[['N']])){
       DataLD[['N']] = 1
     }
-    LDfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype){
-      .convert_CMA2LD(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype)
+    LDfunc = function(parm, Data, inlikefunc=likefunc, inliketype=liketype, inprior=prior){
+      .convert_CMA2LD(parm=parm, Data=Data, likefunc=inlikefunc, liketype=inliketype, prior=inprior)
     }
   }
 
@@ -402,7 +405,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
                         time=time, CMA_all=CMA_all, LD_all=LD_all)))
 }
 
-.convert_CMA2CMA=function(parm, Data, likefunc, liketype='min'){
+.convert_CMA2CMA=function(parm, Data, likefunc, liketype='min', prior=NULL){
   # Convert CMA type output to LD
   output = likefunc(parm, Data)
   if(liketype=='min'){
@@ -410,10 +413,13 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }else if(liketype=='max'){
     fnscale = -1
   }
+  if(!is.null(prior)){
+    output = output - fnscale*prior(parm, Data)
+  }
   return(fnscale*output)
 }
 
-.convert_CMA2LD=function(parm, Data, likefunc, liketype='min'){
+.convert_CMA2LD=function(parm, Data, likefunc, liketype='min', prior=NULL){
   # Convert CMA type output to LD
   if(Data[['applyconstraints']] & !is.null(Data[['constraints']])){
     parm = Data[['constraints']](parm)
@@ -429,10 +435,14 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }else if(liketype=='max'){
     fnscale = 1
   }
-  return(list(LP=fnscale*output, Dev=-fnscale*2*output, Monitor=fnscale*output, yhat=1, parm=parm))
+  LP = fnscale*output
+  if(!is.null(prior)){
+    LP = LP + prior(parm, Data)
+  }
+  return(list(LP=LP, Dev=-2*LP, Monitor=LP, yhat=1, parm=parm))
 }
 
-.convert_LD2CMA=function(parm, Data, likefunc, liketype='min'){
+.convert_LD2CMA=function(parm, Data, likefunc, liketype='min', prior=NULL){
   # Convert LD type output to CMA
   output = likefunc(parm, Data)
   if(liketype=='min'){
@@ -440,10 +450,14 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }else if(liketype=='max'){
     fnscale = -1
   }
-  return(fnscale*output$LP)
+  LP = output$LP
+  if(!is.null(prior)){
+    LP = LP - fnscale*prior(parm, Data)
+  }
+  return(fnscale*LP)
 }
 
-.convert_LD2LD=function(parm, Data, likefunc, liketype='min'){
+.convert_LD2LD=function(parm, Data, likefunc, liketype='min', prior=NULL){
   # Convert LD type output to LD
   if(Data[['applyconstraints']] & !is.null(Data[['constraints']])){
     parm = Data[['constraints']](parm)
@@ -472,9 +486,17 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     fnscale = 1
   }
 
+  LP = fnscale*output$LP
+  Dev = fnscale*output$Dev
+  if(!is.null(prior)){
+    prior_lp = prior(parm, Data)
+    LP = LP + prior_lp
+    Dev = Dev - 2*prior_lp
+  }
+
   if(useful_mon){
     # Need to check we don't also return LP elsewhere
-    Monitor = c(fnscale*output$LP, output$Monitor[!names(output$Monitor) == 'LP'])
+    Monitor = c(LP, output$Monitor[!names(output$Monitor) == 'LP'])
   }else{
     Monitor = output$Monitor
   }
@@ -484,5 +506,5 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }
 
   # We add the expected LP back to the front of Monitor output
-  return(list(LP=fnscale*output$LP, Dev=fnscale*output$Dev, Monitor=Monitor, yhat=output$yhat, parm=parm))
+  return(list(LP=LP, Dev=Dev, Monitor=Monitor, yhat=output$yhat, parm=parm))
 }
