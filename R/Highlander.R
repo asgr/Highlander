@@ -167,6 +167,16 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     if(likefunctype == 'LD'){liketype = 'max'}
   }
 
+  if(!is.null(Data$prior) && !is.null(prior)){
+    stop('prior is provided in input Data and as an argument to prior! Resolve conflict before running Highlander.')
+  }
+
+  if(is.null(prior) && !is.null(Data$prior)){
+    prior = Data$prior
+    #Just to be safe, always return 0 if user likelihood expects to process prior function
+    Data$prior = function(...) 0
+  }
+
   DataCMA = Data
 
   if(likefunctype == 'CMA'){
@@ -426,7 +436,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     parm = Data[['constraints']](parm)
   }
 
-  if(Data[['applyconstraints']] & !is.null(Data[['intervals']]$lo) & !is.null(Data[['intervals']]$hi)){
+  if(Data[['applyintervals']] & !is.null(Data[['intervals']]$lo) & !is.null(Data[['intervals']]$hi)){
     parm[parm<Data[['intervals']]$lo] = Data[['intervals']]$lo[parm<Data[['intervals']]$lo]
     parm[parm>Data[['intervals']]$hi] = Data[['intervals']]$hi[parm>Data[['intervals']]$hi]
   }
@@ -436,11 +446,15 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }else if(liketype=='max'){
     fnscale = 1
   }
-  LP = fnscale*output
+  LL = fnscale * output
+
+  LP = LL
   if(!is.null(prior)){
     LP = LP + prior(parm, Data)
   }
-  return(list(LP=LP, Dev=-2*LP, Monitor=LP, yhat=1, parm=parm))
+
+  return(list(LP = LP, Dev = -2 * LL, Monitor = LP, yhat = 1,parm = parm))
+
 }
 
 .convert_LD2CMA=function(parm, Data, likefunc, liketype='min', prior=NULL){
@@ -488,11 +502,9 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   }
 
   LP = fnscale*output$LP
-  Dev = fnscale*output$Dev
+  Dev = output$Dev #should not need scaling
   if(!is.null(prior)){
-    prior_lp = prior(parm, Data)
-    LP = LP + prior_lp
-    Dev = Dev - 2*prior_lp
+    LP = LP + prior(parm, Data)
   }
 
   if(useful_mon){
