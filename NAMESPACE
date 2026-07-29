@@ -2,6 +2,7 @@ exportPattern("^[[:alpha:]]+")
 
 import("LaplacesDemon")
 import("cmaeshpc")
+import("ParmOff")
 
 importFrom("stats", "quantile", "cor", "pnorm")
 importFrom("numDeriv", "hessian")
