@@ -169,6 +169,24 @@ plotSFH(inpar)
 lines(check_out$SEDout$Stars$agevec, check_out$SEDout$Stars$SFR, col='red')
 ```
 
+## Adding a Prior
+
+**Highlander** provides a generic interface for adding a prior via the `prior` argument. This should be a function that takes `parm` (and optionally `Data`, matching the interface of `likefunc`) and returns a numeric scalar equal to the log-likelihood (log-density) of the prior evaluated at `parm`. This value is added directly to the log-posterior (`LP`), and is correctly propagated through both the CMA (genetic algorithm) and LD (MCMC) stages, so the reported `LP` is always the `likefunc` log-likelihood plus the `prior` log-density.
+
+This means you do not need to modify `likefunc` itself to explore the effect of different priors- you can just pass in a different `prior` function targeting whichever parameters you want to constrain:
+
+```{r eval=FALSE}
+priorfunc = function(parm, Data){
+  # e.g. weakly informative Normal prior on mSFR, and a hard Uniform prior on mpeak
+  dnorm(parm['mSFR'], mean=0, sd=1, log=TRUE) + dunif(parm['mpeak'], min=-2, max=1, log=TRUE)
+}
+
+High_out_prior = Highlander(badpar, Data, ProSpectSEDlike, lower=lower, upper=upper,
+                      Niters=c(200,200), prior=priorfunc)
+```
+
+If `prior` is left as the default of `NULL` then no prior contribution is added (equivalent to assuming a flat/uninformative prior), which reproduces the previous **Highlander** behaviour exactly.
+
 ## Multi-Core Fitting
 
 **Highlander** supports parallel optimisation via the `cores` argument. Setting `cores > 1` launches that many independent **Highlander** chains simultaneously, each starting from a different random seed (`seed`, `seed+1`, ..., `seed+cores-1`). All chains explore the likelihood surface independently, and the chain that achieves the highest log-posterior (LP) is returned. This is particularly useful for multi-modal problems where a single chain may get trapped in a local optimum.
