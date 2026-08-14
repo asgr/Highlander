@@ -440,6 +440,9 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
     parm[parm<Data[['intervals']]$lo] = Data[['intervals']]$lo[parm<Data[['intervals']]$lo]
     parm[parm>Data[['intervals']]$hi] = Data[['intervals']]$hi[parm>Data[['intervals']]$hi]
   }
+  if(!is.null(Data[['parm.names']])){
+    names(parm) = Data[['parm.names']]
+  }
   output = likefunc(parm, Data)
   if(liketype=='min'){
     fnscale = -1
@@ -481,6 +484,9 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
   if(Data[['applyintervals']] & !is.null(Data[['intervals']]$lo) & !is.null(Data[['intervals']]$hi)){
     parm[parm<Data[['intervals']]$lo] = Data[['intervals']]$lo[parm<Data[['intervals']]$lo]
     parm[parm>Data[['intervals']]$hi] = Data[['intervals']]$hi[parm>Data[['intervals']]$hi]
+  }
+  if(!is.null(Data[['parm.names']])){
+    names(parm) = Data[['parm.names']]
   }
 
   if(length(Data[['mon.names']]) > 1){
