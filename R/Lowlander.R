@@ -78,20 +78,53 @@ Lowlander = function(lower, upper, Data, likefunc, Nsamp = 'auto', pcut = 0.1,
     latin_mod[, j] = lower[j] + latin[, j] * (upper[j] - lower[j])
   }
 
-  # Evaluate likefunc in parallel (Windows-safe)
+  # Evaluate likefunc in parallel (Windows-safe). The results are kept as a
+  # list rather than unlisted straight away, so the shape of what each
+  # evaluation returned can be checked first (below).
   if (.Platform$OS.type == "windows" && ncores > 1L) {
     # PSOCK cluster for Windows multi-core
     cl = parallel::makeCluster(ncores)
     on.exit(parallel::stopCluster(cl), add = TRUE)
     parallel::clusterExport(cl, varlist = c("latin_mod", "Data", "likefunc"),
                             envir = environment())
-    output = unlist(parallel::parLapply(cl, seq_len(Nsamp),
-                                        function(i) likefunc(latin_mod[i, ], Data)))
+    raw = parallel::parLapply(cl, seq_len(Nsamp),
+                              function(i) likefunc(latin_mod[i, ], Data))
   } else {
-    output = unlist(parallel::mclapply(seq_len(Nsamp),
-                                       function(i) likefunc(latin_mod[i, ], Data),
-                                       mc.cores = ncores))
+    raw = parallel::mclapply(seq_len(Nsamp),
+                             function(i) likefunc(latin_mod[i, ], Data),
+                             mc.cores = ncores)
   }
+
+  # `output` has to be one value per row of latin_mod, because `keep` is an
+  # index into latin_mod's rows. unlist() quietly breaks that alignment: a
+  # length-0 result (NULL) shifts every later sample up a row, and a length-4
+  # result (the LaplacesDemon-style list) leaves `output` Nsamp*4 long, which
+  # surfaces much later as an opaque subscript error. Reject both here, where
+  # the offending sample numbers are still known.
+  # Name at most a few offending rows; a likefunc that is wrong for one sample
+  # is almost always wrong for all of them, and a full index is just noise.
+  .first = function(idx, n = 5L) idx[seq_len(min(n, length(idx)))]
+  .samples = function(idx) paste0(if (length(idx) > 1L) "samples " else "sample ",
+                                  paste(.first(idx), collapse = ", "))
+
+  len = vapply(raw, length, integer(1))
+  badlen = which(len != 1L)
+  if (length(badlen) > 0L) {
+    stop(paste0(
+      "'likefunc' must return a single numeric value for each sample, but it ",
+      "returned ", paste(unique(len[badlen]), collapse = "/"), " value(s) for ",
+      length(badlen), " of ", Nsamp, " samples (e.g. ", .samples(badlen),
+      "). This is usually the LaplacesDemon-style list output (LP, Dev, ",
+      "Monitor, ...); Lowlander needs one scalar per sample, so wrap it and ",
+      "pick the element you want, e.g. likefunc = function(parm, Data) ",
+      "mylikefunc(parm, Data)$LP."))
+  }
+  badtype = which(!vapply(raw, is.numeric, logical(1)))
+  if (length(badtype) > 0L) {
+    stop(paste0("'likefunc' must return numeric values, but ", .samples(badtype),
+                " returned ", class(raw[[badtype[1]]])[1], "."))
+  }
+  output = unlist(raw)
 
   # Determine which samples to keep based on quantile cut
   good = is.finite(output)
@@ -166,6 +199,7 @@ Lowlander = function(lower, upper, Data, likefunc, Nsamp = 'auto', pcut = 0.1,
     cutval    = cutval,
     cor_data  = cor_data,
     latin     = latin,
-    latin_mod = latin_mod
+    latin_mod = latin_mod,
+    liketype  = liketype
   )))
 }
