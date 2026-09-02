@@ -162,7 +162,7 @@ Highlander=function(parm=NULL, Data, likefunc, likefunctype=NULL, liketype=NULL,
       # is not finite. For AIES the reported thinned chain is walker 1's
       # trajectory and Z[1,] is ignored, so an out-of-region parm can abort the
       # run no matter how good the seeded Z is.
-      if(any(parm < Lowlander$lower | parm > Lowlander$upper)){
+      if(any(parm < Lowlander$lower | parm > Lowlander$upper, na.rm = TRUE)){
         message('Highlander: parm sits outside the Lowlander plausible region; LaplacesDemon evaluates the model there first and stops if the posterior is not finite, so this can abort the run regardless of the seeded Specs. Consider parm = Lowlander(...)$best.')
       }
     }

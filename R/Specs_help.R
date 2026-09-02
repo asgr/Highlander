@@ -135,7 +135,7 @@ Specs_help = function(Algorithm = 'CHARM', Data = NULL, Lowlander = NULL,
     if (is.null(dots$Nc) && is.null(Npar)) {
       message('AIES requires user-supplied Nc or Data. Returning template default Nc = 3.')
     } else if (is.null(dots$Nc)) {
-      message('AIES: using Nc = 2 * length(parm.names) = ', Nc, '.')
+      message('AIES: using default Nc = ', Nc, '.')
     }
     Specs_list = list(Nc = Nc, Z = .Zmatrix(Nc), beta = 2, CPUs = 1,
                 Packages = NULL, Dyn.libs = NULL)
@@ -422,10 +422,7 @@ Specs_help = function(Algorithm = 'CHARM', Data = NULL, Lowlander = NULL,
       }
     } else if (!is.array(Specs_list$Z) || length(dim(Specs_list$Z)) != 3 ||
                dim(Specs_list$Z)[3] != Nc ||
-               # identical(), not !=: Npar can be NULL here (no Data, no
-               # Lowlander), and `dim(Z)[2] != NULL` is logical(0), which turns
-               # the whole condition into NA and errors inside if().
-               !identical(dim(Specs_list$Z)[2], Npar) ||
+               (!is.null(Npar) && dim(Specs_list$Z)[2] != Npar) ||
                (.sizeable && dim(Specs_list$Z)[1] != .z_rows(Iterations, Thinning))) {
       # DEMC wants a 3-D array: floor(Iterations/Thinning)+1 x Npar x Nc, with
       # Iterations/Thinning as LaplacesDemon *adjusts* them. A bare matrix
@@ -433,7 +430,7 @@ Specs_help = function(Algorithm = 'CHARM', Data = NULL, Lowlander = NULL,
       # of bounds", so rebuild from whatever we have.
       Z = Specs_list$Z
       Zn = NULL
-      if (.sizeable) {
+      if (.sizeable && !is.null(Npar)) {
         nrow_z = .z_rows(Iterations, Thinning)
         src = NULL
         if ('Z' %in% names(dots)) {
@@ -458,9 +455,10 @@ Specs_help = function(Algorithm = 'CHARM', Data = NULL, Lowlander = NULL,
         }
       }
       if (is.null(Zn)) {
+        npar_msg = if (is.null(Npar)) 'Npar' else Npar
         warning(paste0('DEMC: Z must be a 3-D array of dim ',
                        if (.sizeable) .z_rows(Iterations, Thinning) else 'floor(Iterations/Thinning)+1',
-                       ' x ', Npar, ' x ', Nc, '. Set to NULL so LaplacesDemon ',
+                       ' x ', npar_msg, ' x ', Nc, '. Set to NULL so LaplacesDemon ',
                        'regenerates it. Pass Iterations and Thinning to Specs_help ',
                        'to have the array built for you.'))
         Specs_list$Z = NULL
