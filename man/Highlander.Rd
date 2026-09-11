@@ -10,6 +10,7 @@ There Can be Only One! Finds the highest points in log-likelihood space by switc
 \usage{
 Highlander(parm = NULL, Data, likefunc, likefunctype = NULL, liketype = NULL,
   prior = NULL, Algorithm = "CHARM", seed = 666, lower = NULL, upper = NULL,
+  Lowlander = NULL,
   applyintervals = TRUE, updateintervals = FALSE, applyconstraints = TRUE,
   dynlim = 2, ablim = 0, optim_iters = 2, Niters = c(100,100), NfinalMCMC = Niters[2],
   walltime = Inf, Specs = Specs_help(Algorithm, Data),
@@ -22,7 +23,7 @@ Highlander(parm = NULL, Data, likefunc, likefunctype = NULL, liketype = NULL,
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{parm}{
-Numeric vector; usual parameter vector- input to \option{likefunc}
+Numeric vector; usual parameter vector- input to \option{likefunc}. May be left as \option{NULL} if either \option{lower} and \option{upper} are given (the midpoint is used) or a \option{Lowlander} object is supplied (\code{Lowlander$best} is used).
 }
   \item{Data}{
 List; usual data input to \option{likefunc} This is where you should put all additional arguments needs since \code{\link[LaplacesDemon]{LaplacesDemon}} cannot be passed additional likelihood function arguments.
@@ -52,10 +53,13 @@ THMC, twalk, UESS, USAMWG, USMWG.
 Integer scalar/vector; random seed to start the \code{Highlander} function with. If using multiple cores and the length of \option{seed} equals the number of cores, then those values will be used, else the seeds will become \option{seed} + 0:(\option{cores} - 1), i.e. the first job will use the \option{seed} provided, and the second job becomes \option{seed} + 1 etc.
 }
   \item{lower}{
-Numeric vector; lower limit allowed for \option{parm}; if \option{lower} = NULL and Data$intervals$lo = NULL it becomes the minimum of \option{parm}*(1/\option{dynlim})  - \option{ablim} or \option{parm}*\option{dynlim} - \option{ablim}; else if Data$intervals$lo is not NULL then this will be used instead.
+Numeric vector; lower limit allowed for \option{parm}; if \option{lower} = NULL and a \option{Lowlander} object is supplied then \code{Lowlander$lower} is used; else if Data$intervals$lo = NULL it becomes the minimum of \option{parm}*(1/\option{dynlim})  - \option{ablim} or \option{parm}*\option{dynlim} - \option{ablim}; else if Data$intervals$lo is not NULL then this will be used instead.
 }
   \item{upper}{
-Numeric vector; upper limit allowed for \option{parm}; if \option{upper} = NULL and Data$intervals$hi = NULL it becomes the maximum of \option{parm}*(1/\option{dynlim})  + \option{ablim} or \option{parm}*\option{dynlim} + \option{ablim}; else if Data$intervals$hi is not NULL then this will be used instead.
+Numeric vector; upper limit allowed for \option{parm}; if \option{upper} = NULL and a \option{Lowlander} object is supplied then \code{Lowlander$upper} is used; else if \option{upper} = NULL and Data$intervals$hi = NULL it becomes the maximum of \option{parm}*(1/\option{dynlim})  + \option{ablim} or \option{parm}*\option{dynlim} + \option{ablim}; else if Data$intervals$hi is not NULL then this will be used instead.
+}
+  \item{Lowlander}{
+List; optional return value of a \code{\link{Lowlander}} call, used to seed the parts of \option{Specs} that \code{\link[LaplacesDemon]{LaplacesDemon}} would otherwise guess blind. When supplied, and only when \option{Specs} (and \option{LDargs$Specs}) have been left at their defaults, they are built with \code{Specs_help(Algorithm, Data, Lowlander = Lowlander, Iterations = ..., Thinning = ...)} so that ensemble and grid-based algorithms (\option{AIES}, \option{DEMC}, \option{twalk}, \option{IM}, \option{GG}, \option{AGG}) start from Lowlander's kept in-bounds samples rather than from \code{LaplacesDemon}'s \code{GIV()} generator, which probes from very wide Normal distributions and typically returns \code{NA} for likelihoods that are undefined outside a narrow region. \option{Lowlander} additionally supplies \option{parm}, \option{lower} and \option{upper}, but only where each has been left as \option{NULL}; anything passed explicitly is used as-is, so the object never overrides a user decision. For \option{parm} this means \code{Lowlander$best} is used as the starting point, which is generally what you want: \code{LaplacesDemon} evaluates the model at \option{parm} before it looks at \option{Specs$Z} at all, and for \option{AIES} \code{Z[1,]} is ignored in favour of \option{parm} (the reported thinned chain is walker 1's trajectory). If \option{parm} is outside the finite region the run can abort no matter how good the seeded \option{Z} is. Supplying \option{parm} explicitly from outside the Lowlander region produces a message rather than an override. Anything the user passes as \option{Specs} or embedded in their own \option{LDargs} is never rewritten, so a hand-built \option{Z} remains exactly that (and for \option{DEMC} must be sized for the run length itself; see \code{\link{Specs_help}}). Note the Lowlander object is validated before any parallel dispatch, so a malformed one fails with a single clear error rather than once per worker. Also note that a Lowlander run selects its samples from \option{likefunc} alone; if a \option{prior} is in play it is not reflected in the seeded region unless \option{likefunc} already incorporates it, so treat the seeded values as in-bounds starting points rather than as draws from the posterior.
 }
   \item{applyintervals}{
 Logical; should the lower and upper intervals be applied by \code{Highlander} directly? This means it will create the list items Data$intervals$lo = lower and Data$intervals$hi = upper. You might want to set this to FALSE when your likelihood function deals with intervals itself using a different structure to the Data$intervals and creating such structures will break functionality inside \option{likefunc} (e.g. this is the case when running with \code{ProFit}).
@@ -85,13 +89,13 @@ Integer scalar; number of iterations to run for the final MCMC run. You might wa
 Numeric scalar; the maximum allowed CPU time for \code{Highlander} in minutes. The function will stop with the best solution to date once the walltime has been exceeded (although it does not stop mid CMA or MCMC, so the \option{walltime} will usually be exceeded a bit).
 }
   \item{Specs}{
-List; \option{Specs} to be passed into \option{LDargs} as a convenience. \option{Specs} is by default populated with the settings obtained from \code{\link{Specs_help}}, if non-defaults are desired then extra arguments can be passed into \code{\link{Specs_help}} via \dots or a fully user-defined list can be constructed obeying the requirements of \code{\link[LaplacesDemon]{LaplacesDemon}} for the \option{Algorithm} being used.
+List; \option{Specs} to be passed into \option{LDargs} as a convenience. \option{Specs} is by default populated with the settings obtained from \code{\link{Specs_help}}, if non-defaults are desired then extra arguments can be passed into \code{\link{Specs_help}} via \dots or a fully user-defined list can be constructed obeying the requirements of \code{\link[LaplacesDemon]{LaplacesDemon}} for the \option{Algorithm} being used. For algorithms that need several plausible starting points (\option{AIES}, \option{DEMC}, \option{twalk}, \option{IM}, \option{GG}, \option{AGG}), pass a \code{\link{Lowlander}} result to \code{\link{Specs_help}} so these are seeded from its kept in-bounds samples rather than left for \code{LaplacesDemon} to guess; see \code{\link{Specs_help}}. If the \option{Lowlander} argument is supplied and \option{Specs} is left at its default, this seeding happens automatically and \option{Specs} need not be built by hand at all. Supplying \option{Specs} explicitly always wins: \code{Highlander} then leaves it untouched, even when a \option{Lowlander} object is present.
 }
   \item{CMAargs}{
 List; arguments to be passed into \code{\link[cmaeshpc]{cmaeshpc}}.
 }
   \item{LDargs}{
-List; arguments to be passed into \code{\link[LaplacesDemon]{LaplacesDemon}}. Note that \option{Algorithm} and \option{Specs} are passed into the \option{LDargs} by default.
+List; arguments to be passed into \code{\link[LaplacesDemon]{LaplacesDemon}}. Note that \option{Algorithm} and \option{Specs} are passed into the \option{LDargs} by default. Elements the user omits fall back to \code{Niters[2]} for \option{Iterations} and 1 for \option{Thinning}. If a \option{Lowlander} object is supplied and \option{LDargs} itself is provided, any \option{Specs} already embedded in it counts as user-supplied and is likewise never overwritten. Because \option{Iterations} can differ between the CMA/MCMC passes (the final pass uses \option{NfinalMCMC}), auto-seeded \option{Specs} are rebuilt at the true length of each pass; a hand-built \option{DEMC} \code{Z} does not get that treatment and must be sized by the user for the pass it runs in.
 }
   \item{parm.names}{
 Character vector; optional vector of parameter names. This will over-write the current names in \option{parm} if these also exist. If provided it ensures the \option{parm} and \option{CMA_last$par} outputs are named.
@@ -105,6 +109,16 @@ Positive integer scalar; number of CPU cores to use (default 1). When \option{co
 }
 \details{
 \code{Highlander} is designed to find good global solutions to highly multi-modal likelihood problems. It does this by oscillating between genetic algorithm stages, and classical MCMC stages.
+
+\subsection{Running with a Lowlander object}{
+\code{\link{Lowlander}} explores the parameter space with a Latin hypercube design and keeps the samples with the most plausible likelihood, returning shrunk bounds, the best point, and the kept samples themselves. Handing that result to \code{Highlander} via \option{Lowlander} does two things: it seeds \option{Specs} (when you have not supplied your own) so algorithms that need several starting points begin inside the plausible region, and it fills \option{parm}, \option{lower} and \option{upper} where they were left \option{NULL}.
+
+The reason this matters is that when \code{Specs$Z} (or \code{SIV}, \code{mu}, \code{Grid}) is left \code{NULL}, \code{LaplacesDemon} falls back to \code{GIV()}, which searches for usable initial values by evaluating the model at random Normal draws with means in \code{[-100, 100]} and standard deviations in \code{[0.1, 1000]}. On likelihoods that are undefined outside a much narrower region -- the usual case for physical models -- \code{GIV} gives up and returns \code{NA}, leaving walkers stacked at \code{NA} so the chain aborts or never approaches the mode.
+
+The interaction with \option{parm} is worth noting explicitly. \code{LaplacesDemon} evaluates the model at \option{parm} before it looks at \option{Specs$Z}, and stops outright with \code{"The posterior is infinite!"} if that is not finite. Worse, for \option{AIES} the reported thinned chain is walker 1's trajectory and \code{Z[1,]} is ignored, so a good \option{Z} cannot rescue a \option{parm} that sits outside the finite region. Defaulting \option{parm} to \code{Lowlander$best} avoids that trap; passing a \option{parm} from outside the region warns rather than overriding.
+
+All other behaviour is unchanged: with \option{Lowlander} = \code{NULL} (the default) nothing here is different from previous versions.
+}
 }
 \value{
 A list output containing:
@@ -127,13 +141,13 @@ A list output containing:
 \item{best_job}{Integer scalar; present when \option{cores} > 1 and \option{keepall} = TRUE. Index (1-based) of the parallel chain that achieved the highest LP.}
 \item{High_jobs}{List; present when \option{cores} > 1 and \option{keepall} = TRUE. Contains the full \code{Highlander} output list for every parallel chain, in chain order. Use \option{best_job} to select the winning chain: \code{High_out$High_jobs[[High_out$best_job]]}.}
 
-When run in multicore mode \option{parm} through to \option{LD_all} inclusive are the results of the 'best' run. \option{LD_last_comb}, \option{best_job and \option{High_jobs} are only present when \option{cores} > 1 and \option{keepall} = TRUE.}
+When run in multicore mode \option{parm} through to \option{LD_all} inclusive are the results of the 'best' run. \option{LD_last_comb}, \option{best_job} and \option{High_jobs} are only present when \option{cores} > 1 and \option{keepall} = TRUE.
 }
 \author{
 Aaron Robotham
 }
 \seealso{
-\code{\link[cmaeshpc]{cmaeshpc}}, \code{\link[LaplacesDemon]{LaplacesDemon}}
+\code{\link[cmaeshpc]{cmaeshpc}}, \code{\link[LaplacesDemon]{LaplacesDemon}}, \code{\link{Lowlander}}, \code{\link{Specs_help}}, \code{\link{Lowlander_helpers}}
 }
 \examples{
 # Create some fake data (note it needs to be a list, but data need not be called 'x'):
@@ -176,6 +190,32 @@ highfit_prior = Highlander(parm=c(-1,2), Data=mock, likefunc=likefunc, liketype=
   prior=priorfunc, lower=c(-1e3,1), upper=c(1e3,1e3), parm.names=c('Mean', 'SD'))
 
 highfit_prior$parm
+
+\dontrun{
+# A Lowlander pre-pass finds in-bounds, plausible samples, and handing it to
+# Highlander seeds Specs from those samples and fills parm/lower/upper where
+# left NULL. This matters for algorithms that need several plausible starting
+# points (AIES, DEMC, twalk, IM, GG, AGG), where LaplacesDemon otherwise guesses
+# via GIV() and usually fails on likelihoods that are undefined out of a narrow
+# region:
+
+intervals = Lowlander(c(-1e3, 1), c(1e3, 1e3), Data = mock, likefunc = likefunc,
+                      liketype = 'max', parm.names = c('Mean', 'SD'))
+
+highfit_ll = Highlander(Data = mock, likefunc = likefunc, liketype = 'max',
+                        Lowlander = intervals, Algorithm = 'AIES',
+                        parm.names = c('Mean', 'SD'))
+
+highfit_ll$parm
+
+# Passing parm, lower or upper explicitly is never overridden by the Lowlander
+# object, and neither is a Specs list you build yourself:
+
+highfit_ll2 = Highlander(parm = c(20, 100), Data = mock, likefunc = likefunc,
+                         liketype = 'max', Lowlander = intervals,
+                         Algorithm = 'AIES', parm.names = c('Mean', 'SD'),
+                         lower = c(-1e3, 1), upper = c(1e3, 1e3))
+}
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

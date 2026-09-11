@@ -29,7 +29,15 @@ List; passed as the second argument to \option{likefunc} at every evaluation.
 }
   \item{likefunc}{
 Function; takes arguments \option{parm} (numeric vector) and \option{Data}
-(list) and returns a single numeric scalar.
+(list) and returns a single numeric scalar. This is stricter than
+\code{\link{Highlander}}, which accepts the \code{\link[LaplacesDemon]{LaplacesDemon}}
+list with \code{LP}, \code{Dev} and \code{Monitor} elements: \option{likefunc}
+is evaluated once per sample and its result must be one numeric value per row,
+because \code{keep} indexes rows of \option{latin_mod}. A function that returns
+a list or a longer vector is rejected up front with a message naming the
+offending samples, so an \code{LD}-style function needs wrapping, e.g.
+\code{likefunc = function(parm, Data) mylikefunc(parm, Data)$LP}. Note that
+\option{liketype} below refers to that extracted scalar.
 }
   \item{Nsamp}{
 Positive integer scalar; number of Latin-hypercube samples to draw. Default 'auto' will
@@ -120,12 +128,13 @@ An invisible list containing:
 \item{cor_data}{Numeric matric; correlation matrix between all parameters and \option{output} (latter is the last row and column).}
 \item{latin}{Numeric matrix; the \option{Nsamp} x \option{Npar} unit-cube LHS design used.}
 \item{latin_mod}{Numeric matrix; the \option{Nsamp} x \option{Npar} parameter matrix mapped to physical bounds.}
+\item{liketype}{Character scalar; the \option{liketype} actually used, recorded so that \code{\link{Lowlander_kept}} can rank the kept samples in the correct direction without being told again.}
 }
 \author{
 Aaron Robotham
 }
 \seealso{
-\code{\link{Highlander}}, \code{\link[lhs]{randomLHS}}
+\code{\link{Highlander}}, \code{\link{Lowlander_kept}}, \code{\link{Lowlander_Z}}, \code{\link{Lowlander_best}}, \code{\link[lhs]{randomLHS}}
 }
 \examples{
 \dontrun{

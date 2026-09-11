@@ -4,5 +4,5 @@ import("LaplacesDemon")
 import("cmaeshpc")
 import("ParmOff")
 
-importFrom("stats", "quantile", "cor", "pnorm")
+importFrom("stats", "quantile", "cor", "pnorm", "approx", "rnorm")
 importFrom("numDeriv", "hessian")

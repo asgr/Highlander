@@ -120,6 +120,105 @@ Fit <- LaplacesDemon(
 Each algorithm may require a different `Specs` list.  The required and
 optional elements of `Specs` for every algorithm are documented below.
 
+## Auto-filling `Specs` with `Specs_help()`
+
+`Specs_help(Algorithm, Data)` returns the correct `Specs` list for any
+algorithm, so it rarely needs to be written by hand:
+
+```{r specs-help, eval=FALSE}
+Highlander(..., Algorithm = "AIES",
+           Specs = Specs_help("AIES", Data))
+```
+
+Any named argument is applied over the default, and a name that does not
+belong to that algorithm's `Specs` raises a warning rather than being
+silently dropped:
+
+```{r specs-help-override, eval=FALSE}
+Specs_help("AIES", Data, Nc = 16, beta = 3)
+```
+
+### Seeding from `Lowlander`
+
+Several algorithms need starting values that already sit in a region where
+the likelihood is finite: `Z` for `AIES` and `DEMC`, `SIV` for `twalk`, `mu`
+for `IM`, and the evaluation `Grid` for `GG`/`AGG`. If these are left `NULL`,
+**LaplacesDemon** falls back to its own `GIV()` generator, which probes the
+model at random Normal draws with means in $[-100, 100]$ and standard
+deviations in $[0.1, 1000]$. On likelihoods that are undefined outside a much
+narrower region (the usual case for physical models), `GIV` gives up and
+returns `NA`, leaving walkers stacked at `NA` so the chain either aborts or
+never approaches the mode.
+
+Since `Lowlander` has already found in-bounds, plausible parameter samples, the
+usual thing is simply to hand its output to `Highlander`:
+
+```{r specs-help-lowlander, eval=FALSE}
+# Lowlander wants a single number per sample, so pull the scalar out of the
+# LaplacesDemon-style list that mylikefunc returns.
+intervals = Lowlander(lower, upper, Data = Data, liketype = 'min',
+                      likefunc = function(parm, Data) mylikefunc(parm, Data)$LP)
+
+Highlander(Data = Data, likefunc = mylikefunc, liketype = 'min',
+           Lowlander = intervals, Algorithm = "AIES")
+```
+
+Note the two `likefunc` contracts differ, and this is the one place where the
+same function cannot be passed to both calls. `Highlander` wants what
+**LaplacesDemon** wants: a list with `LP`, `Dev` and `Monitor` elements.
+`Lowlander` evaluates its `likefunc` once per Latin-hypercube sample and needs a
+numeric scalar back (see `?Lowlander`); `liketype = 'min'` / `'max'` then says
+which end of those scalars to keep. Passing `Lowlander` an LD-style list is
+caught up front with a message naming the samples that misbehaved and showing
+the `$LP` wrapper, so wrap the function and select the element you want, as
+above.
+The two `liketype` arguments are separate decisions even when they happen to
+agree: `Lowlander`'s refers to the scalar you extracted, while `Highlander`'s
+refers to how it should interpret `mylikefunc`'s `LP` field.
+
+That single `Lowlander` argument seeds `Specs` and fills in `parm`, `lower` and
+`upper` wherever they were left `NULL`, so `intervals$best` and `intervals$lower`
+no longer have to be repeated by hand. Anything you *do* pass explicitly wins, so
+a bespoke `parm`, set of bounds, or `Specs` list is never overwritten. One
+caveat: `Lowlander` selects its samples from its own `likefunc` alone, so if you
+also pass a `prior` to `Highlander`, the seeded region does not reflect it unless
+the likelihood already folds it in. Treat the seeds as in-bounds starting points
+rather than posterior draws. Calling `Specs_help()` yourself is still available
+and equivalent for the seeding step:
+
+```{r specs-help-manual, eval=FALSE}
+Specs = Specs_help("AIES", Data, Lowlander = intervals)
+```
+
+Note that starting `Initial.Values` from `intervals$best` matters independently
+of `Z`. **LaplacesDemon** evaluates the model at `Initial.Values` *before* it
+looks at `Z` and stops outright if that posterior is not finite; and when `Z` is
+supplied, **AIES** takes rows 2..$N_c$ as walkers 2..$N_c$ while walker 1 starts
+from `Initial.Values` (`Z[1,]` is ignored). The reported thinned chain is walker
+1's trajectory, so a start outside the finite region can abort the fit no matter
+how good `Z` is.
+
+`DEMC` needs one extra thing. Its `Z` is a 3-D array rather than a matrix, with
+`floor(Iterations / Thinning) + 1` slices, so `Specs_help` can only build it when
+told how long the run will be:
+
+```{r specs-help-demc, eval=FALSE}
+Specs = Specs_help("DEMC", Data, Lowlander = intervals,
+                   Iterations = 1000, Thinning = 1)
+```
+
+**LaplacesDemon** rewrites both numbers before it sizes `Z` — `Iterations` is
+rounded and clamped up to a minimum of 11, and `Thinning` falls back to 1 unless
+it lies in $[1, \text{Iterations}]$ — so `Specs_help` applies the same
+adjustment rather than trusting the raw values. `Highlander` handles this for you
+because it knows each MCMC pass's length; it also rebuilds `Z` on the final pass,
+which runs for `NfinalMCMC` rather than `Niters[2]`. A hand-built array is left
+alone, so it must be sized against the *adjusted* values for whichever pass uses
+it.
+
+Without `Iterations`, `Z` is left `NULL` (with a message) and
+**LaplacesDemon** generates it as before.
+
 ---
 
 # Metropolis–Hastings Algorithms
@@ -599,7 +698,7 @@ with $\beta = 2$.
 | Spec | Description |
 |------|-------------|
 | `Nc`       | Number of walkers (≥ 3; must be even when `CPUs > 1`). |
-| `Z`        | Optional $N_c \times d$ matrix of initial walker positions (`NULL` to auto-generate). |
+| `Z`        | Optional $N_c \times d$ matrix of initial walker positions (`NULL` to auto-generate via `GIV()`, which often fails on restricted likelihoods — see *Seeding from `Lowlander`* above). |
 | `beta`     | Scale parameter controlling the stretch move (default 2; must be > 1). |
 | `CPUs`     | Number of CPUs for parallel walker updates (≥ 1). |
 | `Packages` | Packages to load on each CPU (`NULL` if none). |
@@ -638,7 +737,7 @@ to a randomly-chosen history point.
 | `gamma` | Scale for difference vector (defaults to $2.38/\sqrt{2d}$). |
 | `Nc`    | Number of parallel chains (≥ 3). |
 | `w`     | Probability of snooker update (recommended 0.1). |
-| `Z`     | Optional matrix/array of previous thinned samples. |
+| `Z`     | Optional 3-D array of previous thinned samples, of dim `floor(Iterations/Thinning) + 1` x $d$ x `Nc`, with `Iterations` and `Thinning` taken *after* `LaplacesDemon` adjusts them. A plain matrix survives only if it has at least half that many rows (it gets row-recycled, which duplicates history and weakens the proposals); below that it dies with `subscript out of bounds`, and an array whose first dimension is off is a hard stop. Use `Specs_help("DEMC", Data, Lowlander = ..., Iterations = ..., Thinning = ...)` (or pass `Lowlander` to `Highlander`) to build it. |
 
 ```{r demc}
 Fit <- LaplacesDemon(Model, MyData, Initial.Values,
