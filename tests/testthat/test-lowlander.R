@@ -64,6 +64,14 @@ test_that("Lowlander validates its design and scalar likelihood output", {
     "'pcut'"
   )
   expect_error(
+    do.call(Lowlander, utils::modifyList(args, list(Nsamp = 0))),
+    "Nsamp must be a positive integer"
+  )
+  expect_error(
+    do.call(Lowlander, utils::modifyList(args, list(Nsamp = 1.5))),
+    "Nsamp must be a positive integer"
+  )
+  expect_error(
     do.call(Lowlander, utils::modifyList(
       args, list(latin = matrix(2, nrow = nrow(latin), ncol = 2))
     )),

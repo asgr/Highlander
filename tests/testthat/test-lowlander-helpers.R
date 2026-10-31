@@ -54,5 +54,5 @@ test_that("Lowlander helpers handle unusable inputs and name the best point", {
   best <- Lowlander_best(lowlander_fixture(), parm.names = c("first", "second"))
   expect_equal(best, c(first = 1, second = 11))
   expect_null(Lowlander_best(NULL))
-  expect_warning(expect_null(Lowlander_best(list())), "no $best")
+  expect_warning(expect_null(Lowlander_best(list())), "no .*best element")
 })
