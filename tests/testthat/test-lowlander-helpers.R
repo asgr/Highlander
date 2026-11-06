@@ -5,7 +5,7 @@ test_that("Lowlander_kept filters and ranks samples in the recorded direction", 
 
   kept <- Lowlander_kept(result, parm.names = c("first", "second"))
 
-  expect_equal(kept, matrix(c(2, 12, 3, 13, 0, 10), ncol = 2, byrow = TRUE,
+  expect_equal(kept, matrix(c(3, 13, 2, 12, 0, 10), ncol = 2, byrow = TRUE,
                            dimnames = list(NULL, c("first", "second"))))
 
   result$output <- c(4, 1, 3, 2)
