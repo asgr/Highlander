@@ -19,7 +19,8 @@ Lowlander = function(lower, upper, Data, likefunc, Nsamp = 'auto', pcut = 0.1,
     }
   }
 
-  if (length(Nsamp) != 1L || is.na(Nsamp) || !is.finite(Nsamp)) {
+  if (length(Nsamp) != 1L || is.na(Nsamp) || !is.finite(Nsamp) ||
+      Nsamp < 1 || Nsamp != floor(Nsamp) || Nsamp > .Machine$integer.max) {
     stop("Nsamp must be a positive integer (>= 1) or 'auto'.")
   }
   Nsamp = as.integer(Nsamp)
